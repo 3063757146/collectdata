@@ -1,0 +1,59 @@
+VPS上抓流量：
+1. 安装
+sudo apt update
+sudo apt install -y tcpdump tshark net-tools iproute2 lsof
+
+2. 查看出口网卡名称
+ip route get 8.8.8.8
+直接ifconfig也行
+
+3. 建立实验目录
+mkdir -p ~/osn_capture/pcaps ~/osn_capture/logs
+cd ~/osn_capture
+
+4. 抓vps->社交平台的出口流量
+sudo tcpdump -i enp1s0 -nn -s 0 -w pcaps/R001_enp1s0_full.pcap
+
+
+配置流程：
+1. 控制机
+本地Ubuntu 2004虚拟机，需要：docker、cloak browser、cloak browser manager、xray（用于配置cloak的socks代理，因为它只能设置http、https和socks，adspower中的ssh不能用，否则直接ssh连接vps就行了）
+
+//docker run -p 8080:8080 --add-host=host.docker.internal:host-gateway -v cloakprofiles:/data cloakhq/cloakbrowser-manager
+
+docker run -d --name cloakbrowser-manager --network host -v cloakprofiles:/data cloakhq/cloakbrowser-manager
+
+//cloak manager proxy配置：socks5://host.docker.internal:10808
+cloak manager proxy配置：socks5://127.0.0.1:10808
+
+cloak(虚拟机docker)--xray(虚拟机本地)--v2ray-agent(VPS)--社交平台
+
+打通xray到vps：
+xray安装：https://developer.baidu.com/article/details/2813485（不用移动可执行文件）
+
+./xray run -config ./config.json
+curl -x socks5h://127.0.0.1:10808 https://api.ipify.org （开另一个终端测试连接是否成功）
+ss -lntup | grep 10808  查看监听进程
+pkill -9 xray 结束xray进程
+
+模拟docker上网：
+docker run --rm --network host curlimages/curl -x socks5h://127.0.0.1:10808 https://api.ipify.org
+
+/*
+cloak浏览器无法上网：打通docker到xray
+docker run --add-host=host.docker.internal:host-gateway busybox nc -vz -w 5 host.docker.internal 10808  测试容器是否连到10808端口
+应该显示host.docker.internal (172.17.0.1:10808) open
+否则就是因为防火墙隔离了，放行docker 0到10808
+ufw status
+ufw allow in on docker0 to any port 10808 proto tcp
+ufw allow in on docker0 to any port 10808 proto udp
+
+测试docker上网情况（整条链路 模拟cloak上网）：
+docker run --rm --add-host=host.docker.internal:host-gateway curlimages/curl -x socks5h://host.docker.internal:10808 https://api.ipify.org
+*/
+
+
+2. vps
+由于cloak无法通过ssh连接，所以需要在vps上安装代理工具
+https://github.com/mack-a/v2ray-agent
+https://www.v2ray-agent.com/archives/1708584312877
