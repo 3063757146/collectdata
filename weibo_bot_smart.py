@@ -18,6 +18,102 @@ import logging
 from datetime import datetime
 import re
 
+# 双端抓包系统（可选）
+import os
+
+# 检查是否通过环境变量禁用装饰器抓包（用于run_capture.py场景）
+if os.getenv('DISABLE_DECORATOR_CAPTURE') == '1':
+    CAPTURE_ENABLED = False
+    # 使用空装饰器（run_capture.py会在会话级别抓包）
+    def capture_traffic(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+else:
+    try:
+        from capture import capture_traffic
+        CAPTURE_ENABLED = True
+    except ImportError:
+        CAPTURE_ENABLED = False
+        # 如果capture包不存在，使用空装饰器
+        def capture_traffic(*args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+
+
+# === 模板数据 ===
+
+def get_comment_templates():
+    """获取评论模板"""
+    return [
+        # 赞同认可类
+        "说得好", "有道理", "赞同", "说到心坎里了", "深有同感", "确实如此",
+        "太对了", "一针见血", "说得太好了", "非常认同", "完全赞同", "正解",
+        # 学习收获类
+        "学到了", "涨知识了", "长见识了", "受教了", "学习了", "get到了",
+        "原来如此", "恍然大悟", "又学到新东西了", "涨姿势了", "受益匪浅",
+        # 表扬夸赞类
+        "厉害厉害", "很棒", "太棒了", "优秀", "牛", "nb", "666", "绝了",
+        "高手", "大神", "强", "真棒", "amazing", "great",
+        # 支持鼓励类
+        "支持一下", "加油", "顶", "挺你", "支持", "给你点赞", "冲冲冲",
+        # 情感表达类
+        "哈哈哈", "笑死", "太真实了", "破防了", "绷不住了", "爱了爱了",
+        "心动了", "感动", "泪目", "好暖", "治愈", "舒服了",
+        # 互动交流类
+        "同问", "我也是", "同感", "握爪", "抱抱", "求更新", "期待后续",
+        "想知道更多", "能详细说说吗", "可以展开讲讲吗",
+        # 简短赞美类
+        "赞", "火", "顶", "棒", "妙", "好", "强", "赞一个", "给力",
+    ]
+
+
+def get_repost_templates():
+    """获取转发模板"""
+    return [
+        # 转发标记类
+        "转发微博", "转发", "repost", "分享", "分享一下", "分享给大家",
+        # 收藏标记类
+        "马克", "mark", "马克一下", "收藏", "收藏了", "先收藏", "收藏慢慢看",
+        "存一下", "留着", "记下了", "保存", "码住", "存档",
+        # 学习类
+        "学习学习", "学习了", "学习一下", "涨知识了", "涨姿势", "长见识了",
+        "学到了", "又学到了", "get", "好好学习", "值得学习",
+        # 认同推荐类
+        "说得好", "有道理", "说的对", "赞同这个观点", "很有道理", "确实",
+        "推荐", "强烈推荐", "值得一看", "值得分享", "值得关注", "不错不错",
+        "好文", "干货", "精华", "优质内容", "高质量",
+        # 感悟启发类
+        "很有启发", "受益匪浅", "深受启发", "引人深思", "值得思考",
+        "说到心坎里了", "深有感触", "感同身受",
+        # 实用标记类
+        "转需", "有用", "实用", "干货满满", "建议收藏", "新技能get",
+        "tips", "笔记", "做个记录", "记录一下",
+        # 情感表达类
+        "太真实了", "破防了", "爱了", "赞", "顶", "支持", "给力",
+        "精彩", "brilliant", "amazing", "nice", "cool", "awesome",
+    ]
+
+
+def get_post_templates():
+    """获取发帖模板"""
+    return [
+        # 日常生活感悟
+        "今天天气真不错", "周末愉快", "美好的一天", "新的一周开始了",
+        "阳光明媚", "心情不错", "今日份快乐", "岁月静好",
+        # 学习分享
+        "学习使我快乐", "今日学习打卡", "每天进步一点点", "知识就是力量",
+        "终身学习", "学无止境", "读书笔记", "今日所学",
+        # 生活态度
+        "保持热爱，奔赴山海", "认真生活", "享受当下", "不负时光",
+        "珍惜每一天", "活在当下", "简单生活", "慢生活",
+        # 励志正能量
+        "加油", "一起努力", "不放弃", "坚持就是胜利",
+        "相信自己", "越努力越幸运", "每天都要加油鸭", "奥利给",
+    ]
+
+
 def setup_logging():
     """配置日志系统"""
     # 日志文件名（固定，追加模式）
@@ -140,6 +236,7 @@ def wait_for_login(driver):
         print("⚠️  似乎还没有登录，请确认已登录后按回车...")
         input()
 
+# @capture_traffic("weibo", "like")  # 已被 run_capture.py 的会话级抓包替代
 def like_weibo(driver, weibo_element):
     """点赞微博（增强版，支持多种选择器）"""
     try:
@@ -294,6 +391,7 @@ def like_weibo(driver, weibo_element):
         traceback.print_exc()
         return False
 
+# @capture_traffic("weibo", "comment")  # 已被 run_capture.py 的会话级抓包替代
 def comment_weibo(driver, content_list):
     """评论微博"""
     try:
@@ -330,6 +428,7 @@ def comment_weibo(driver, content_list):
         logging.error(f"评论异常: {e}")
         return False
 
+# @capture_traffic("weibo", "repost")  # 已被 run_capture.py 的会话级抓包替代
 def repost_weibo(driver, repost_templates):
     """转发微博（带评论）"""
     try:
@@ -343,37 +442,114 @@ def repost_weibo(driver, repost_templates):
         # 等待转发弹窗完全加载
         time.sleep(3)
 
-        # 查找转发输入框并输入内容
+        # 先定位转发弹窗，避免误选页面顶部的快捷发帖框
         try:
+            print("      🔍 查找转发弹窗...")
+            dialog_selectors = [
+                'div[class*="woo-dialog"]',
+                'div[class*="dialog"]',
+                'div[class*="Dialog"]',
+                'div[role="dialog"]',
+                'div[class*="modal"]',
+                'div[class*="Modal"]',
+                'div[class*="popup"]',
+            ]
+
+            dialog = None
+            for selector in dialog_selectors:
+                try:
+                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    for elem in elements:
+                        if elem.is_displayed():
+                            # 检查是否是转发弹窗（包含"转发"文字）
+                            if '转发' in elem.text:
+                                dialog = elem
+                                print(f"      ✅ 找到转发弹窗: {selector}")
+                                break
+                    if dialog:
+                        break
+                except:
+                    continue
+
+            if not dialog:
+                print("      ⚠️  未找到转发弹窗，使用整个页面查找")
+                dialog = driver  # 降级：在整个页面查找
+
+        except Exception as e:
+            print(f"      ⚠️  定位弹窗失败: {e}，使用整个页面")
+            dialog = driver
+
+        # 在弹窗内查找转发输入框并输入内容
+        try:
+            print("      🔍 在弹窗内查找输入框...")
             textarea_selectors = [
-                'textarea[placeholder*="分享"]',
+                # 优先匹配转发评论框的特征
+                'textarea[id^="comment-textarea-"]',  # id 以 comment-textarea- 开头
+                'textarea[placeholder*="评论"]',      # placeholder 包含"评论"
                 'textarea[placeholder*="转发"]',
-                'textarea[class*="_input"]',
+                'textarea[placeholder*="说点什么"]',
+                'textarea[class*="input"]',
+                'div[contenteditable="true"]',
+                'textarea',  # 兜底
             ]
 
             textarea = None
             for selector in textarea_selectors:
                 try:
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    elements = dialog.find_elements(By.CSS_SELECTOR, selector)  # 在弹窗内查找
                     if elements:
-                        textarea = elements[0]
-                        break
+                        # 检查元素是否可见，并排除快捷发帖框
+                        for elem in elements:
+                            if elem.is_displayed():
+                                placeholder = elem.get_attribute('placeholder') or ''
+                                # 排除快捷发帖框（包含"新鲜事"）
+                                if '新鲜事' in placeholder:
+                                    print(f"      ⚠️  跳过快捷发帖框: {placeholder}")
+                                    continue
+                                textarea = elem
+                                print(f"      ✅ 找到输入框: {selector}, placeholder='{placeholder}'")
+                                break
+                        if textarea:
+                            break
                 except:
                     continue
 
-            # 随机选择转发评论
+            # 随机选择转发评论并输入
             if textarea:
                 content = random.choice(repost_templates)
+                print(f"      📝 准备输入转发评论: {content}")
+
+                # 滚动到输入框位置
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", textarea)
+                time.sleep(0.5)
+
+                # 点击输入框激活
                 driver.execute_script("arguments[0].click();", textarea)
                 time.sleep(0.5)
+
+                # 输入内容
                 textarea.send_keys(content)
-                time.sleep(1)
+                time.sleep(1.5)  # 增加等待时间，确保输入完成
+
                 print(f"      ✅ 已输入转发评论: {content}")
             else:
-                print("      ⚠️  未找到输入框，直接转发")
+                print("      ⚠️  未找到输入框，将直接转发（不带评论）")
+                # 调试信息：打印弹窗内所有 textarea
+                all_textareas = dialog.find_elements(By.TAG_NAME, 'textarea')
+                print(f"      🔧 调试：弹窗内共有 {len(all_textareas)} 个 textarea")
+                for i, ta in enumerate(all_textareas[:3], 1):
+                    try:
+                        placeholder = ta.get_attribute('placeholder') or '(无)'
+                        class_name = ta.get_attribute('class')[:50] or '(无)'
+                        visible = ta.is_displayed()
+                        print(f"      - textarea{i}: placeholder='{placeholder}', visible={visible}, class='{class_name}'")
+                    except:
+                        pass
 
         except Exception as e:
             print(f"      ⚠️  输入转发内容失败: {e}")
+            import traceback
+            traceback.print_exc()
 
         # 等待转发按钮可见并点击
         try:
@@ -404,6 +580,7 @@ def repost_weibo(driver, repost_templates):
         logging.error(f"转发异常: {e}")
         return False
 
+# @capture_traffic("weibo", "post")  # 已被 run_capture.py 的会话级抓包替代
 def post_weibo(driver, post_templates):
     """发布微博"""
     try:
@@ -597,97 +774,110 @@ def post_weibo(driver, post_templates):
         traceback.print_exc()
         return False
 
-def smart_browse_and_interact(driver, max_weibos=10, interaction_rate=0.3, post_templates=None, post_rate=0.08):
+def smart_browse_and_interact(
+    driver,
+    max_weibos=3,
+    interaction_rate=0.3,
+    enable_like=True,
+    enable_comment=True,
+    enable_repost=True,
+    enable_post=False,  # 新增：是否启用发帖
+    comment_templates=None,
+    repost_templates=None,
+    post_templates=None
+):
     """
-    智能浏览和互动
+    智能浏览和互动 - 确保模式
 
     参数:
-        max_weibos: 最多浏览多少条微博
-        interaction_rate: 互动概率（0-1），例如 0.3 表示 30% 的微博会互动
-        post_templates: 发帖文案模板列表
-        post_rate: 发帖概率（0-1），例如 0.08 表示每次循环有 8% 的概率发帖
+        max_weibos: 默认浏览多少条微博（默认3条）
+        interaction_rate: 额外互动概率（达成目标后的额外互动概率）
+        enable_like: 是否启用点赞（True则确保至少成功1次）
+        enable_comment: 是否启用评论（True则确保至少成功1次）
+        enable_repost: 是否启用转发（True则确保至少成功1次）
+        enable_post: 是否启用发帖（True则确保至少成功1次）
+        comment_templates: 评论模板列表（None则使用默认）
+        repost_templates: 转发模板列表（None则使用默认）
+        post_templates: 发帖文案模板列表（None则使用默认）
+
+    新逻辑：
+        - 如果 enable_like=True，确保至少成功点赞1次
+        - 如果 enable_comment=True，确保至少成功评论1次
+        - 如果 enable_repost=True，确保至少成功转发1次
+        - 如果 enable_post=True，确保至少成功发帖1次
+        - 最多尝试 max_weibos*3 条微博（避免无限循环）
     """
-    print("\n🤖 开始智能浏览模式...")
-    print(f"   - 最多浏览 {max_weibos} 条微博")
-    print(f"   - 互动概率: {interaction_rate*100:.0f}%")
-    print(f"   - 发帖概率: {post_rate*100:.0f}%" if post_templates else "   - 发帖功能: 未启用")
+    print("\n🤖 开始智能浏览模式（确保模式）...")
+    print(f"   - 默认浏览 {max_weibos} 条微博")
+    print(f"   - 点赞: {'启用（确保≥1次）' if enable_like else '禁用'}")
+    print(f"   - 评论: {'启用（确保≥1次）' if enable_comment else '禁用'}")
+    print(f"   - 转发: {'启用（确保≥1次）' if enable_repost else '禁用'}")
+    print(f"   - 发帖: {'启用（确保≥1次）' if enable_post else '禁用'}")
 
-    # 预定义的评论内容（丰富多样，50+条，移除emoji避免编码问题）
-    comment_templates = [
-        # 赞同认可类
-        "说得好", "有道理", "赞同", "说到心坎里了", "深有同感", "确实如此",
-        "太对了", "一针见血", "说得太好了", "非常认同", "完全赞同", "正解",
-
-        # 学习收获类
-        "学到了", "涨知识了", "长见识了", "受教了", "学习了", "get到了",
-        "原来如此", "恍然大悟", "又学到新东西了", "涨姿势了", "受益匪浅",
-
-        # 表扬夸赞类
-        "厉害厉害", "很棒", "太棒了", "优秀", "牛", "nb", "666", "绝了",
-        "高手", "大神", "强", "真棒", "amazing", "great",
-
-        # 支持鼓励类
-        "支持一下", "加油", "顶", "挺你", "支持", "给你点赞", "冲冲冲",
-
-        # 情感表达类
-        "哈哈哈", "笑死", "太真实了", "破防了", "绷不住了", "爱了爱了",
-        "心动了", "感动", "泪目", "好暖", "治愈", "舒服了",
-
-        # 互动交流类
-        "同问", "我也是", "同感", "握爪", "抱抱", "求更新", "期待后续",
-        "想知道更多", "能详细说说吗", "可以展开讲讲吗",
-
-        # 简短赞美类（替代emoji）
-        "赞", "火", "顶", "棒", "妙", "好", "强", "赞一个", "给力",
-    ]
-
-    # 预定义的转发评论（更多样化，50+条）
-    repost_templates = [
-        # 转发标记类
-        "转发微博", "转发", "repost", "分享", "分享一下", "分享给大家",
-
-        # 收藏标记类
-        "马克", "mark", "马克一下", "收藏", "收藏了", "先收藏", "收藏慢慢看",
-        "存一下", "留着", "记下了", "保存", "码住", "存档",
-
-        # 学习类
-        "学习学习", "学习了", "学习一下", "涨知识了", "涨姿势", "长见识了",
-        "学到了", "又学到了", "get", "好好学习", "值得学习",
-
-        # 认同推荐类
-        "说得好", "有道理", "说的对", "赞同这个观点", "很有道理", "确实",
-        "推荐", "强烈推荐", "值得一看", "值得分享", "值得关注", "不错不错",
-        "好文", "干货", "精华", "优质内容", "高质量",
-
-        # 感悟启发类
-        "很有启发", "受益匪浅", "深受启发", "引人深思", "值得思考",
-        "说到心坎里了", "深有感触", "感同身受",
-
-        # 实用标记类
-        "转需", "有用", "实用", "干货满满", "建议收藏", "新技能get",
-        "tips", "笔记", "做个记录", "记录一下",
-
-        # 情感表达类
-        "太真实了", "破防了", "爱了", "赞", "顶", "支持", "给力",
-        "精彩", "brilliant", "amazing", "nice", "cool", "awesome",
-    ]
+    # 使用默认模板（如果未提供）
+    if comment_templates is None:
+        comment_templates = get_comment_templates()
+    if repost_templates is None:
+        repost_templates = get_repost_templates()
 
     browsed_count = 0
     interacted_count = 0
     interacted_weibo_ids = set()  # 记录已互动的微博ID（通过URL去重，更可靠）
     posted_count = 0  # 记录发帖次数
 
-    for i in range(max_weibos):
+    # 成功计数器
+    success_count = {
+        'like': 0,
+        'comment': 0,
+        'repost': 0,
+        'post': 0,  # 新增：发帖计数
+    }
+
+    # 目标：每个启用的操作至少成功1次
+    targets = {
+        'like': 1 if enable_like else 0,
+        'comment': 1 if enable_comment else 0,
+        'repost': 1 if enable_repost else 0,
+        'post': 1 if enable_post else 0,  # 使用 enable_post 控制
+    }
+
+    max_attempts = max_weibos * 3  # 最多尝试次数（避免无限循环）
+    i = 0
+
+    while i < max_attempts:
+        i += 1
+
+        # 检查是否达成所有目标
+        all_targets_met = all(
+            success_count[action] >= targets[action]
+            for action in ['like', 'comment', 'repost', 'post']
+        )
+
+        # 如果已达成所有目标且浏览数达到默认值，退出
+        if all_targets_met and browsed_count >= max_weibos:
+            print(f"\n✅ 已达成所有目标！")
+            print(f"   - 点赞成功: {success_count['like']} 次")
+            print(f"   - 评论成功: {success_count['comment']} 次")
+            print(f"   - 转发成功: {success_count['repost']} 次")
+            if enable_post:
+                print(f"   - 发帖成功: {success_count['post']} 次")
+            break
+
         try:
-            # 每次循环开始时，随机判断是否发帖（小概率）
-            if post_templates and random.random() < post_rate:
-                print(f"\n📝 [循环 {i+1}] 准备发帖...")
-                logging.info(f"触发自动发帖（第 {i+1} 次循环）")
-                if post_weibo(driver, post_templates):
+            # 确保模式：如果启用发帖且还没发够，则发帖
+            if enable_post and success_count['post'] < targets['post']:
+                print(f"\n📝 [循环 {i}] 准备发帖（确保至少1次）...")
+                logging.info(f"触发自动发帖（第 {i} 次循环）")
+
+                # 使用发帖模板（如果没传则使用默认）
+                templates = post_templates if post_templates else get_post_templates()
+
+                if post_weibo(driver, templates):
+                    success_count['post'] += 1
                     posted_count += 1
                     print("   ✅ 发帖成功！")
                     # 发帖后等待较长时间（模拟真人发帖后的停顿）
-                    wait_time = random.uniform(30, 60)
+                    wait_time = random.uniform(15, 25)
                     print(f"   ⏱️  发帖后暂停 {wait_time:.1f} 秒...")
                     time.sleep(wait_time)
 
@@ -696,7 +886,7 @@ def smart_browse_and_interact(driver, max_weibos=10, interaction_rate=0.3, post_
                     driver.get('https://weibo.com')
                     time.sleep(random.uniform(3, 5))
                 else:
-                    print("   ⚠️  发帖失败，继续浏览")
+                    print("   ⚠️  发帖失败，继续尝试")
                     time.sleep(random.uniform(2, 4))
 
             # 继续正常的浏览和互动流程
@@ -743,235 +933,244 @@ def smart_browse_and_interact(driver, max_weibos=10, interaction_rate=0.3, post_
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", current_weibo)
             simulate_reading(3, 7)
 
-            # 随机决定是否互动
-            if random.random() < interaction_rate:
-                print("   💬 决定互动...")
+            # 智能决定互动操作（新逻辑）
+            actions = []
 
-                # 随机选择互动方式（可以多选）
-                actions = []
+            # 优先执行未达成目标的操作
+            if enable_like and success_count['like'] < targets['like']:
+                actions.append('like')
 
-                # 70% 概率点赞
-                if random.random() < 0.9:
-                    actions.append('like')
+            if enable_comment and success_count['comment'] < targets['comment']:
+                actions.append('comment')
 
-                # 45% 概率评论
-                if random.random() < 0.8:
-                    actions.append('comment')
+            if enable_repost and success_count['repost'] < targets['repost']:
+                actions.append('repost')
 
-                # 35% 概率转发
-                if random.random() < 0.6:
-                    actions.append('repost')
+            # 如果没有任何操作可执行，跳过
+            if not actions:
+                # 如果还有未达成的目标，提示继续尝试
+                if not all_targets_met:
+                    print("   ⚠️  本条微博未选择互动，继续寻找...")
+                else:
+                    print("   👀 目标已达成，只是浏览，不互动")
+                continue
 
-                # 如果没有选中任何操作，默认点赞
-                if not actions:
-                    actions = ['like']
+            # 显示选择的操作和目标进度
+            print(f"   💬 决定互动: {', '.join(actions)}")
+            progress = (f"      当前进度: 点赞{success_count['like']}/{targets['like']}, "
+                       f"评论{success_count['comment']}/{targets['comment']}, "
+                       f"转发{success_count['repost']}/{targets['repost']}")
+            if enable_post:
+                progress += f", 发帖{success_count['post']}/{targets['post']}"
+            print(progress)
 
-                print(f"      选择操作: {', '.join(actions)}")
+            # 新逻辑：先进入详情页，再执行所有操作（包括点赞）
+            need_detail_page = 'comment' in actions or 'repost' in actions
 
-                # 新逻辑：先进入详情页，再执行所有操作（包括点赞）
-                need_detail_page = 'comment' in actions or 'repost' in actions
+            if need_detail_page:
+                # 需要进入详情页
+                try:
+                    # 找到微博内的链接（更可靠的方式）
+                    print("      🖱️  查找微博详情页链接...")
+                    detail_link = None
 
-                if need_detail_page:
-                    # 需要进入详情页
                     try:
-                        # 找到微博内的链接（更可靠的方式）
-                        print("      🖱️  查找微博详情页链接...")
-                        detail_link = None
+                        # 方法1：查找article内的a标签链接
+                        links = current_weibo.find_elements(By.TAG_NAME, 'a')
+                        for link in links:
+                            href = link.get_attribute('href')
+                            # 微博详情页链接格式：包含/数字/字母数字
+                            if href and ('/status/' in href or re.search(r'/\d+/[A-Za-z0-9]+', href)):
+                                detail_link = href
+                                print(f"      ✅ 找到详情页链接: {detail_link}")
+                                break
 
-                        try:
-                            # 方法1：查找article内的a标签链接
-                            links = current_weibo.find_elements(By.TAG_NAME, 'a')
-                            for link in links:
-                                href = link.get_attribute('href')
-                                # 微博详情页链接格式：包含/数字/字母数字
-                                if href and ('/status/' in href or re.search(r'/\d+/[A-Za-z0-9]+', href)):
-                                    detail_link = href
-                                    print(f"      ✅ 找到详情页链接: {detail_link}")
-                                    break
-
-                            if not detail_link:
-                                # 方法2：尝试点击微博正文区域
-                                print("      ⚠️  未找到详情页链接，尝试点击正文区域...")
-                                # 查找微博正文
-                                content_areas = current_weibo.find_elements(By.XPATH, ".//*[contains(@class, 'content') or contains(@class, 'text')]")
-                                if content_areas:
-                                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", content_areas[0])
-                                    time.sleep(0.5)
-                                    content_areas[0].click()
-                                    time.sleep(3)
-                                else:
-                                    # 方法3：点击article本身
-                                    current_weibo.click()
-                                    time.sleep(3)
-                            else:
-                                # 使用链接直接访问（最可靠）
-                                print(f"      🔗 直接访问详情页...")
-                                driver.get(detail_link)
+                        if not detail_link:
+                            # 方法2：尝试点击微博正文区域
+                            print("      ⚠️  未找到详情页链接，尝试点击正文区域...")
+                            # 查找微博正文
+                            content_areas = current_weibo.find_elements(By.XPATH, ".//*[contains(@class, 'content') or contains(@class, 'text')]")
+                            if content_areas:
+                                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", content_areas[0])
+                                time.sleep(0.5)
+                                content_areas[0].click()
                                 time.sleep(3)
-
-                        except Exception as e:
-                            print(f"      ⚠️  查找链接失败: {e}，尝试直接点击...")
-                            current_weibo.click()
+                            else:
+                                # 方法3：点击article本身
+                                current_weibo.click()
+                                time.sleep(3)
+                        else:
+                            # 使用链接直接访问（最可靠）
+                            print(f"      🔗 直接访问详情页...")
+                            driver.get(detail_link)
                             time.sleep(3)
 
-                        # 打印当前URL用于调试
-                        print(f"      🔗 当前页面URL: {driver.current_url}")
+                    except Exception as e:
+                        print(f"      ⚠️  查找链接失败: {e}，尝试直接点击...")
+                        current_weibo.click()
+                        time.sleep(3)
 
-                        # 检查页面是否正常跳转
-                        current_url = driver.current_url
-                        if 'data:' in current_url or current_url == 'about:blank' or 'weibo.com' not in current_url:
-                            print(f"      ❌ 页面跳转异常！URL: {current_url}")
-                            print(f"      🔄 返回首页重试...")
+                    # 打印当前URL用于调试
+                    print(f"      🔗 当前页面URL: {driver.current_url}")
+
+                    # 检查页面是否正常跳转
+                    current_url = driver.current_url
+                    if 'data:' in current_url or current_url == 'about:blank' or 'weibo.com' not in current_url:
+                        print(f"      ❌ 页面跳转异常！URL: {current_url}")
+                        print(f"      🔄 返回首页重试...")
+                        driver.get('https://weibo.com')
+                        time.sleep(3)
+
+                        # 验证是否成功返回
+                        if 'weibo.com' in driver.current_url:
+                            print(f"      ✅ 已返回首页")
+                        else:
+                            print(f"      ❌ 返回失败，再次尝试...")
+                            driver.get('https://weibo.com')
+                            time.sleep(3)
+                        continue
+
+                    # 提取微博ID用于去重（从URL中提取）
+                    weibo_id = None
+                    try:
+                        import re
+                        # 打印当前URL用于调试
+                        print(f"      🔗 当前URL: {current_url}")
+
+                        # 多种URL格式匹配
+                        # 格式1: https://weibo.com/1234567/ABCDEFG
+                        # 格式2: https://weibo.com/detail/ABCDEFG
+                        # 格式3: https://m.weibo.cn/detail/ABCDEFG
+                        patterns = [
+                            r'/(\d+)/([A-Za-z0-9]+)',  # 格式1
+                            r'/detail/([A-Za-z0-9]+)',  # 格式2
+                            r'weibo\.com/([^/]+)/([^/?]+)',  # 通用格式
+                        ]
+
+                        for pattern in patterns:
+                            match = re.search(pattern, current_url)
+                            if match:
+                                if len(match.groups()) == 2:
+                                    weibo_id = f"{match.group(1)}_{match.group(2)}"
+                                else:
+                                    weibo_id = match.group(1)
+                                break
+
+                        if not weibo_id:
+                            # 如果没有匹配到，使用URL的hash值
+                            weibo_id = str(hash(current_url))
+                            print(f"      ⚠️  使用URL hash作为ID: {weibo_id}")
+
+                        # 检查是否已经互动过这条微博
+                        if weibo_id in interacted_weibo_ids:
+                            print(f"      ⚠️  这条微博已经互动过（ID: {weibo_id}），跳过")
+                            print(f"      🔄 返回首页...")
                             driver.get('https://weibo.com')
                             time.sleep(3)
 
-                            # 验证是否成功返回
+                            # 验证返回状态
                             if 'weibo.com' in driver.current_url:
-                                print(f"      ✅ 已返回首页")
+                                print(f"      ✅ 已返回首页，继续浏览")
                             else:
-                                print(f"      ❌ 返回失败，再次尝试...")
+                                print(f"      ❌ 返回异常: {driver.current_url}")
                                 driver.get('https://weibo.com')
                                 time.sleep(3)
                             continue
 
-                        # 提取微博ID用于去重（从URL中提取）
-                        weibo_id = None
+                        # 记录这条微博（在执行操作之前记录，避免操作失败后重复尝试）
+                        interacted_weibo_ids.add(weibo_id)
+                        print(f"      📌 微博ID: {weibo_id}")
+                    except Exception as e:
+                        print(f"      ⚠️  提取微博ID失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+
+                    # 在详情页内执行所有操作（包括点赞）
+                    if 'like' in actions:
+                        # 在详情页找到主微博元素（article）
                         try:
-                            import re
-                            # 打印当前URL用于调试
-                            print(f"      🔗 当前URL: {current_url}")
-
-                            # 多种URL格式匹配
-                            # 格式1: https://weibo.com/1234567/ABCDEFG
-                            # 格式2: https://weibo.com/detail/ABCDEFG
-                            # 格式3: https://m.weibo.cn/detail/ABCDEFG
-                            patterns = [
-                                r'/(\d+)/([A-Za-z0-9]+)',  # 格式1
-                                r'/detail/([A-Za-z0-9]+)',  # 格式2
-                                r'weibo\.com/([^/]+)/([^/?]+)',  # 通用格式
-                            ]
-
-                            for pattern in patterns:
-                                match = re.search(pattern, current_url)
-                                if match:
-                                    if len(match.groups()) == 2:
-                                        weibo_id = f"{match.group(1)}_{match.group(2)}"
-                                    else:
-                                        weibo_id = match.group(1)
-                                    break
-
-                            if not weibo_id:
-                                # 如果没有匹配到，使用URL的hash值
-                                weibo_id = str(hash(current_url))
-                                print(f"      ⚠️  使用URL hash作为ID: {weibo_id}")
-
-                            # 检查是否已经互动过这条微博
-                            if weibo_id in interacted_weibo_ids:
-                                print(f"      ⚠️  这条微博已经互动过（ID: {weibo_id}），跳过")
-                                print(f"      🔄 返回首页...")
-                                driver.get('https://weibo.com')
-                                time.sleep(3)
-
-                                # 验证返回状态
-                                if 'weibo.com' in driver.current_url:
-                                    print(f"      ✅ 已返回首页，继续浏览")
+                            # 详情页通常第一个 article 就是主微博
+                            detail_articles = driver.find_elements(By.TAG_NAME, 'article')
+                            if detail_articles:
+                                main_weibo = detail_articles[0]
+                                print("      📌 使用详情页主微博元素")
+                                # 使用增强版 like_weibo 函数（有状态验证）
+                                if like_weibo(driver, main_weibo):
+                                    success_count['like'] += 1
+                                    interacted_count += 1
+                                    logging.info("详情页点赞成功")
                                 else:
-                                    print(f"      ❌ 返回异常: {driver.current_url}")
-                                    driver.get('https://weibo.com')
-                                    time.sleep(3)
-                                continue
-
-                            # 记录这条微博（在执行操作之前记录，避免操作失败后重复尝试）
-                            interacted_weibo_ids.add(weibo_id)
-                            print(f"      📌 微博ID: {weibo_id}")
+                                    print("      ⚠️  详情页点赞未成功")
+                                    logging.warning("详情页点赞失败：未找到按钮或状态未改变")
+                            else:
+                                # 如果找不到 article，尝试在整个页面查找
+                                print("      ⚠️  未找到article元素，在整个页面查找...")
+                                body = driver.find_element(By.TAG_NAME, 'body')
+                                if like_weibo(driver, body):
+                                    success_count['like'] += 1
+                                    interacted_count += 1
+                                    logging.info("详情页点赞成功（body）")
+                                else:
+                                    logging.warning("详情页点赞失败")
+                            time.sleep(random.uniform(1, 2))
                         except Exception as e:
-                            print(f"      ⚠️  提取微博ID失败: {e}")
+                            print(f"      ⚠️  详情页点赞异常: {e}")
+                            logging.error(f"详情页点赞异常: {e}")
                             import traceback
                             traceback.print_exc()
 
-                        # 在详情页内执行所有操作（包括点赞）
-                        if 'like' in actions:
-                            # 在详情页找到主微博元素（article）
-                            try:
-                                # 详情页通常第一个 article 就是主微博
-                                detail_articles = driver.find_elements(By.TAG_NAME, 'article')
-                                if detail_articles:
-                                    main_weibo = detail_articles[0]
-                                    print("      📌 使用详情页主微博元素")
-                                    # 使用增强版 like_weibo 函数（有状态验证）
-                                    if like_weibo(driver, main_weibo):
-                                        interacted_count += 1
-                                        logging.info("详情页点赞成功")
-                                    else:
-                                        print("      ⚠️  详情页点赞未成功")
-                                        logging.warning("详情页点赞失败：未找到按钮或状态未改变")
-                                else:
-                                    # 如果找不到 article，尝试在整个页面查找
-                                    print("      ⚠️  未找到article元素，在整个页面查找...")
-                                    body = driver.find_element(By.TAG_NAME, 'body')
-                                    if like_weibo(driver, body):
-                                        interacted_count += 1
-                                        logging.info("详情页点赞成功（body）")
-                                    else:
-                                        logging.warning("详情页点赞失败")
-                                time.sleep(random.uniform(1, 2))
-                            except Exception as e:
-                                print(f"      ⚠️  详情页点赞异常: {e}")
-                                logging.error(f"详情页点赞异常: {e}")
-                                import traceback
-                                traceback.print_exc()
-
-                        if 'comment' in actions:
-                            if comment_weibo(driver, comment_templates):
-                                interacted_count += 1
-                                time.sleep(random.uniform(1, 2))
-
-                        if 'repost' in actions:
-                            if repost_weibo(driver, repost_templates):
-                                interacted_count += 1
-                                time.sleep(random.uniform(1, 2))
-
-                        # 返回首页（不使用back，直接访问更稳定）
-                        print("      ⬅️  返回首页...")
-                        try:
-                            # 直接访问首页，比back()更可靠
-                            driver.get('https://weibo.com')
-                            time.sleep(random.uniform(2, 4))
-
-                            # 验证是否成功返回
-                            if 'weibo.com' not in driver.current_url:
-                                print("      ⚠️  返回首页失败，重试...")
-                                driver.get('https://weibo.com')
-                                time.sleep(3)
-                            else:
-                                print("      ✅  已返回首页")
-                        except Exception as e:
-                            print(f"      ⚠️  返回首页异常: {e}")
-                            driver.get('https://weibo.com')
-                            time.sleep(3)
-
-                    except Exception as e:
-                        print(f"      ⚠️  详情页操作失败: {e}")
-                        # 尝试恢复到首页
-                        try:
-                            if 'data:' in driver.current_url or 'about:blank' in driver.current_url:
-                                driver.get('https://weibo.com')
-                                time.sleep(3)
-                            else:
-                                driver.back()
-                                time.sleep(2)
-                        except:
-                            driver.get('https://weibo.com')
-                            time.sleep(3)
-                else:
-                    # 只有点赞，在列表页直接操作
-                    if 'like' in actions:
-                        if like_weibo(driver, current_weibo):
+                    if 'comment' in actions:
+                        if comment_weibo(driver, comment_templates):
+                            success_count['comment'] += 1
                             interacted_count += 1
-                            print("      ✅ 点赞成功（列表页）")
                             time.sleep(random.uniform(1, 2))
+
+                    if 'repost' in actions:
+                        if repost_weibo(driver, repost_templates):
+                            success_count['repost'] += 1
+                            interacted_count += 1
+                            time.sleep(random.uniform(1, 2))
+
+                    # 返回首页（不使用back，直接访问更稳定）
+                    print("      ⬅️  返回首页...")
+                    try:
+                        # 直接访问首页，比back()更可靠
+                        driver.get('https://weibo.com')
+                        time.sleep(random.uniform(2, 4))
+
+                        # 验证是否成功返回
+                        if 'weibo.com' not in driver.current_url:
+                            print("      ⚠️  返回首页失败，重试...")
+                            driver.get('https://weibo.com')
+                            time.sleep(3)
+                        else:
+                            print("      ✅  已返回首页")
+                    except Exception as e:
+                        print(f"      ⚠️  返回首页异常: {e}")
+                        driver.get('https://weibo.com')
+                        time.sleep(3)
+
+                except Exception as e:
+                    print(f"      ⚠️  详情页操作失败: {e}")
+                    # 尝试恢复到首页
+                    try:
+                        if 'data:' in driver.current_url or 'about:blank' in driver.current_url:
+                            driver.get('https://weibo.com')
+                            time.sleep(3)
+                        else:
+                            driver.back()
+                            time.sleep(2)
+                    except:
+                        driver.get('https://weibo.com')
+                        time.sleep(3)
             else:
-                print("   👀 只是浏览，不互动")
+                # 只有点赞，在列表页直接操作
+                if 'like' in actions:
+                    if like_weibo(driver, current_weibo):
+                        success_count['like'] += 1
+                        interacted_count += 1
+                        print("      ✅ 点赞成功（列表页）")
+                        time.sleep(random.uniform(1, 2))
 
             # 随机暂停（模拟思考时间）
             time.sleep(random.uniform(2, 5))
@@ -988,15 +1187,20 @@ def smart_browse_and_interact(driver, max_weibos=10, interaction_rate=0.3, post_
     print("\n" + "="*60)
     print(f"📊 浏览完成！")
     print(f"   - 浏览了 {browsed_count} 条微博")
-    print(f"   - 互动了 {interacted_count} 次")
-    if post_templates:
-        print(f"   - 发帖了 {posted_count} 次")
+    print(f"   - 总互动次数: {interacted_count} 次")
+    print(f"   - 成功点赞: {success_count['like']} 次")
+    print(f"   - 成功评论: {success_count['comment']} 次")
+    print(f"   - 成功转发: {success_count['repost']} 次")
+    if enable_post:
+        print(f"   - 成功发帖: {success_count['post']} 次")
     print("="*60)
 
     # 记录统计信息到日志
-    summary = f"浏览完成 - 浏览: {browsed_count}, 互动: {interacted_count}"
-    if post_templates:
-        summary += f", 发帖: {posted_count}"
+    summary = (f"浏览完成 - 浏览: {browsed_count}, 互动: {interacted_count}, "
+               f"点赞: {success_count['like']}, 评论: {success_count['comment']}, "
+               f"转发: {success_count['repost']}")
+    if enable_post:
+        summary += f", 发帖: {success_count['post']}"
     logging.info(summary)
 
 def main():
@@ -1028,151 +1232,95 @@ def main():
             print("✅ 已登录")
             logging.info("已登录状态")
 
-        # 预定义的发帖文案（丰富多样，移除emoji避免编码问题）
-        post_templates = [
-            "今天天气真不错，心情也跟着好起来了",
-            "分享一个今天学到的小知识～",
-            "周末愉快！大家有什么计划吗？",
-            "刚看了一部很棒的电影，强烈推荐！",
-            "早安！新的一天，加油",
-            "晚安，好梦～",
-            "今天的晚霞真美啊",
-            "读了一本好书，受益匪浅",
-            "美好的一天从一杯咖啡开始",
-            "记录一下今天的小确幸",
-            "生活需要仪式感，今天给自己买了束花",
-            "周一加油！这周也要元气满满！",
-            "下午茶时间到～",
-            "今天的运动打卡完成！",
-            "分享一下今天的好心情",
-            "又是充实的一天！",
-            "今天遇到了一件很有趣的事情～",
-            "保持热爱，奔赴山海",
-            "慢慢来，一切都会好起来的",
-            "今天也要开心呀！",
-            "生活就是要慢慢品味",
-            "记录平凡生活中的小美好",
-            "今天的心情：晴转多云再转晴",
-            "感恩遇见，珍惜拥有",
-            "做自己喜欢的事，过自己想要的生活",
-            "人生就是要不断尝试新事物",
-            "今天的自己比昨天更进步一点点",
-            "保持好奇心，保持童心",
-            "简单的生活，简单的快乐",
-            "每一天都是新的开始",
-            "今天学到了一个新技能，很开心",
-            "又是美好的一天",
-            "今天吃到了超级好吃的东西",
-            "分享一下最近的读书笔记",
-            "记录生活中的点点滴滴",
-            "今天天气好适合出门走走",
-            "周末时光，悠闲惬意",
-            "今天的小目标完成了",
-            "努力生活，认真热爱",
-            "保持微笑，保持善良",
-            "今天也是充满希望的一天",
-            "生活虽平凡，但依然要认真对待",
-            "今天发现了一个好地方",
-            "分享一下今天的随手拍",
-            "简单的幸福，简单的满足",
-            "今天的工作告一段落，可以放松一下了",
-            "周五啦，期待周末",
-            "今天学习了新东西，很有收获",
-            "保持学习，保持进步",
-            "今天的心情很不错",
-        ]
+        # 获取发帖模板
+        post_templates = get_post_templates()
 
-        # 选择浏览模式
+        # 选择测试模式
         print("\n" + "="*60)
-        print("请选择浏览模式:")
-        print("1. 智能浏览首页（推荐）")
-        print("2. 浏览指定话题")
-        print("3. 访问指定微博详情页")
-        print("4. 发布微博")
+        print("请选择测试行为:")
+        print("1. 纯浏览（不互动）")
+        print("2. 点赞测试")
+        print("3. 评论测试")
+        print("4. 转发测试")
+        print("5. 发帖测试")
         print("0. 退出")
         print("="*60)
 
-        choice = input("请输入选项 (0-4): ").strip()
+        choice = input("请输入选项 (0-5): ").strip()
 
         if choice == '1':
-            # 智能浏览首页
-            max_weibos = int(input("浏览多少条微博？(建议 10-20): ") or "10")
-            interaction_rate = float(input("互动概率？(0.1-0.5，例如 0.3 表示 30%): ") or "0.3")
-
-            # 询问是否启用自动发帖
-            enable_post = input("是否启用自动发帖功能？(y/n，默认y): ").strip().lower()
-            if enable_post != 'n':
-                post_rate = float(input("发帖概率？(0.05-0.15，例如 0.08 表示 8%，默认 0.08): ") or "0.08")
-                logging.info(f"开始智能浏览首页 - 浏览数: {max_weibos}, 互动率: {interaction_rate*100}%, 发帖率: {post_rate*100}%")
-                smart_browse_and_interact(driver, max_weibos, interaction_rate, post_templates, post_rate)
-            else:
-                logging.info(f"开始智能浏览首页 - 浏览数: {max_weibos}, 互动率: {interaction_rate*100}%, 发帖: 禁用")
-                smart_browse_and_interact(driver, max_weibos, interaction_rate)
+            # 纯浏览
+            print("\n🔍 纯浏览模式（不互动）")
+            logging.info("开始纯浏览测试")
+            smart_browse_and_interact(
+                driver,
+                max_weibos=3,
+                interaction_rate=0.0,
+                enable_like=False,
+                enable_comment=False,
+                enable_repost=False,
+                enable_post=False
+            )
 
         elif choice == '2':
-            # 浏览话题
-            topic = input("请输入话题名称（例如: Python）: ")
-            search_url = f"https://s.weibo.com/weibo?q=%23{topic}%23"
-            print(f"\n访问话题: {topic}")
-            logging.info(f"访问话题: {topic}")
-            driver.get(search_url)
-            time.sleep(3)
-
-            max_weibos = int(input("浏览多少条微博？: ") or "10")
-            interaction_rate = float(input("互动概率？(0.1-0.5): ") or "0.3")
-
-            # 询问是否启用自动发帖
-            enable_post = input("是否启用自动发帖功能？(y/n，默认y): ").strip().lower()
-            if enable_post != 'n':
-                post_rate = float(input("发帖概率？(0.05-0.15，默认 0.08): ") or "0.08")
-                logging.info(f"开始话题浏览 - 话题: {topic}, 浏览数: {max_weibos}, 互动率: {interaction_rate*100}%, 发帖率: {post_rate*100}%")
-                smart_browse_and_interact(driver, max_weibos, interaction_rate, post_templates, post_rate)
-            else:
-                logging.info(f"开始话题浏览 - 话题: {topic}, 浏览数: {max_weibos}, 互动率: {interaction_rate*100}%, 发帖: 禁用")
-                smart_browse_and_interact(driver, max_weibos, interaction_rate)
+            # 点赞测试
+            print("\n👍 点赞测试模式（确保至少成功1次）")
+            logging.info("开始点赞测试")
+            smart_browse_and_interact(
+                driver,
+                max_weibos=3,
+                interaction_rate=0.3,
+                enable_like=True,
+                enable_comment=False,
+                enable_repost=False,
+                enable_post=False
+            )
 
         elif choice == '3':
-            # 访问指定详情页（保留原功能）
-            weibo_url = input("请输入微博详情页链接: ")
-            if weibo_url.startswith('http'):
-                driver.get(weibo_url)
-                time.sleep(3)
-                print("已打开详情页，可以手动操作或按回车退出...")
-                input()
+            # 评论测试
+            print("\n💬 评论测试模式（确保至少成功1次）")
+            logging.info("开始评论测试")
+            comment_templates = get_comment_templates()
+            smart_browse_and_interact(
+                driver,
+                max_weibos=3,
+                interaction_rate=0.3,
+                enable_like=False,
+                enable_comment=True,
+                enable_repost=False,
+                enable_post=False,
+                comment_templates=comment_templates
+            )
 
         elif choice == '4':
-            # 发布微博
-            print("\n" + "="*60)
-            print("📝 发布微博模式")
-            print("="*60)
+            # 转发测试
+            print("\n🔄 转发测试模式（确保至少成功1次）")
+            logging.info("开始转发测试")
+            repost_templates = get_repost_templates()
+            smart_browse_and_interact(
+                driver,
+                max_weibos=3,
+                interaction_rate=0.3,
+                enable_like=False,
+                enable_comment=False,
+                enable_repost=True,
+                enable_post=False,
+                repost_templates=repost_templates
+            )
 
-            # 询问发布数量
-            post_count_input = input("要发布几条微博？(默认1条，输入0则随机选择): ").strip()
-            if post_count_input == '0':
-                post_count = 1
-            else:
-                post_count = int(post_count_input or "1")
-
-            # 询问是否自定义内容
-            custom = input("使用预设文案？(y/n，默认y): ").strip().lower()
-
-            for i in range(post_count):
-                print(f"\n发布第 {i+1}/{post_count} 条微博...")
-
-                if custom == 'n':
-                    content = input("请输入微博内容: ")
-                    if content:
-                        # 手动模式：临时创建包含用户输入的列表
-                        post_weibo(driver, [content])
-                else:
-                    # 自动模式：使用预设模板
-                    post_weibo(driver, post_templates)
-
-                # 如果还有下一条，等待一段时间（模拟人类行为）
-                if i < post_count - 1:
-                    wait_time = random.uniform(30, 90)
-                    print(f"\n   ⏰ 等待 {wait_time:.0f} 秒后发布下一条...")
-                    time.sleep(wait_time)
+        elif choice == '5':
+            # 发帖测试
+            print("\n📝 发帖测试模式（在浏览中发帖）")
+            logging.info("开始发帖测试")
+            smart_browse_and_interact(
+                driver,
+                max_weibos=3,
+                interaction_rate=0.0,
+                enable_like=False,
+                enable_comment=False,
+                enable_repost=False,
+                enable_post=True  # 启用发帖，确保至少1次
+            )
 
         elif choice == '0':
             print("\n👋 退出程序")

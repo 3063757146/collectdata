@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \" 总包数: $\\(tshark -r output/mac-vps.pcap)",
+      "Bash(ssh root@216.167.34.54 \"ip addr show | grep -E '^[0-9]+:' | head -10\")",
+      "Bash(ssh root@216.167.34.54 \"which tcpdump && tcpdump --version 2>&1 | head -3\")",
+      "Bash(ssh root@216.167.34.54 \"ls -la /usr/sbin/tcpdump /usr/bin/tcpdump 2>&1\")",
+      "Bash(chmod +x batch_capture.py)",
+      "Bash(python3 batch_capture.py --config weibo_test --dry-run)",
+      "Bash(python3 show_bpf_filters.py)"
+    ]
+  }
+}
