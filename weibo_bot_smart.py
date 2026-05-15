@@ -48,8 +48,15 @@ def setup_logging():
     return logging.getLogger(__name__)
 
 def create_driver(use_proxy=True):
-    """创建 Chrome 浏览器实例"""
+    """创建 Chrome 浏览器实例（保留登录状态）"""
     chrome_options = Options()
+
+    # 📂 设置用户数据目录（保存登录状态）
+    import os
+    user_data_dir = os.path.expanduser('~/selenium_profiles/weibo')
+    chrome_options.add_argument(f'--user-data-dir={user_data_dir}')
+    chrome_options.add_argument('--profile-directory=Default')
+    print(f"💾 使用配置文件: {user_data_dir}")
 
     if use_proxy:
         chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
