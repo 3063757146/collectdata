@@ -64,11 +64,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 10),
+            ('like', 30),
             ('comment', 10),
             ('repost', 10),
             ('post', 5),      # 发帖少一点
-            ('browse', 10),
+            ('browse', 80),
         ]
     },
 

@@ -76,9 +76,9 @@ class CaptureConfig:
         """
         生成macOS端的BPF过滤器
 
-        只抓取与VPS通信的流量（加密隧道流量）
+        只抓取与VPS的隧道流量，排除SSH管理流量
         """
-        return f"host {self.vps_ip}"
+        return f"host {self.vps_ip} and not port 22"
 
     def get_remote_bpf(self, platform: str = None, target_ips: List[str] = None) -> str:
         """
@@ -98,10 +98,14 @@ class CaptureConfig:
         """
         # 基础排除规则
         exclude_rules = [
-            # 排除从macOS到VPS的隧道流量（源IP=macOS，目标端口=33979）
-            f"not (src host {self.mac_public_ip} and dst port {self.vps_tunnel_port})",
-            # 排除SSH管理流量
-            "not port 22"
+            # 排除VPS的隧道端口流量（不依赖macOS的公网IP，因为IP会变）
+            f"not port {self.vps_tunnel_port}",
+            # 排除SSH管理流量（mac ↔ vps的SSH连接）
+            "not port 22",
+            # 排除DNS流量（vps → 外部的DNS查询/响应）
+            "not port 53",
+            # 排除ARP包（链路层协议，无意义）
+            "not arp"
         ]
 
         # 目标IP过滤（仅在启用过滤时）

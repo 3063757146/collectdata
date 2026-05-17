@@ -15,16 +15,12 @@
 """
 
 import sys
-import os
 import time
 import logging
 import argparse
 from capture import CaptureManager, CaptureConfig
 from capture.label import generate_label
 
-# 禁用bot脚本中的装饰器抓包（避免双重抓包）
-# run_capture.py 在会话级别管理抓包，不需要装饰器级别的抓包
-os.environ['DISABLE_DECORATOR_CAPTURE'] = '1'
 
 # 配置日志
 logging.basicConfig(
@@ -51,25 +47,19 @@ def run_weibo_action(action: str, iteration: int) -> bool:
 
     try:
         # 导入微博bot模块
-        logger.info(f"[Iteration {iteration}] Importing weibo_bot_smart...")
         import weibo_bot_smart
 
         # 创建driver
-        logger.info(f"[Iteration {iteration}] Creating Chrome driver with proxy...")
         driver = weibo_bot_smart.create_driver(use_proxy=True)
-        logger.info(f"[Iteration {iteration}] Chrome driver created successfully")
 
         try:
             # 打开微博首页
-            logger.info(f"[Iteration {iteration}] Opening https://weibo.com ...")
             driver.get("https://weibo.com")
-            logger.info(f"[Iteration {iteration}] Page loaded, waiting 3s...")
             time.sleep(3)
 
             # 检查登录状态
-            logger.info(f"[Iteration {iteration}] Checking login status...")
             if not weibo_bot_smart.check_login(driver):
-                logger.info(f"[Iteration {iteration}] Not logged in, waiting for manual login...")
+                logger.info("[Iteration {iteration}] Not logged in, waiting for manual login...")
                 weibo_bot_smart.wait_for_login(driver)
 
             logger.info(f"[Iteration {iteration}] Logged in successfully")
@@ -79,7 +69,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 # 浏览并点赞1次
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=3,
+                    max_weibos=5,
                     interaction_rate=0.3,
                     enable_like=True,
                     enable_comment=False,
@@ -91,7 +81,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 comment_templates = weibo_bot_smart.get_comment_templates()
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=3,
+                    max_weibos=5,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=True,
@@ -104,7 +94,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 repost_templates = weibo_bot_smart.get_repost_templates()
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=3,
+                    max_weibos=5,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=False,
@@ -121,11 +111,8 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 # 纯浏览，不互动
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=3,
-                    interaction_rate=0.0,
-                    enable_like=False,
-                    enable_comment=False,
-                    enable_repost=False
+                    max_weibos=10,
+                    interaction_rate=0.0
                 )
 
             else:
@@ -370,18 +357,7 @@ def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
 
             # === 第3步：停止抓包 ===
             logger.info(f"[{i}/{num}] Stopping capture...")
-            # 检查抓包是否还在运行（避免重复停止）
-            if manager._running:
-                result = manager.stop()
-            else:
-                logger.warning(f"[{i}/{num}] Capture already stopped (may have been stopped by decorator)")
-                # 创建一个空结果
-                result = {
-                    'label': label,
-                    'local_pcap': None,
-                    'vps_pcap': None,
-                    'duration': 0,
-                }
+            result = manager.stop()
 
             # === 第4步：记录结果 ===
             if bot_success:
