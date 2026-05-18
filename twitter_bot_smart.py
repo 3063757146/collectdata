@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium_stealth import stealth  # 反检测库
 import time
 import random
 import sys
@@ -195,13 +196,19 @@ def create_driver(use_proxy=False):
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
-        driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
-            'source': '''
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                })
-            '''
-        })
+
+        # 应用 selenium-stealth 反检测（自动隐藏所有自动化特征）
+        print("🛡️  应用 Stealth 反检测模式...")
+        stealth(driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="MacIntel",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
+        print("✅ Stealth 模式已启用")
+
         return driver
     except Exception as e:
         print(f"❌ 创建浏览器失败: {e}")

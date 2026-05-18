@@ -58,7 +58,7 @@ def create_driver(use_proxy=True):
 
     if use_proxy:
         # Clash HTTP 代理（如果是 SOCKS5，改为 socks5://127.0.0.1:7897）
-        chrome_options.add_argument('--proxy-server=http://127.0.0.1:7897')
+        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
 
     # 反检测设置
     chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])

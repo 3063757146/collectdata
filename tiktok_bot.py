@@ -62,7 +62,7 @@ def create_driver(use_proxy=True):
     chrome_options.add_argument('--profile-directory=Default')
 
     if use_proxy:
-        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:7897')
+        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
 
     # 反检测设置
     chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])

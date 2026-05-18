@@ -22,6 +22,7 @@ import os
 import time
 import logging
 import argparse
+import random
 from capture import CaptureManager, CaptureConfig
 from capture.label import generate_label
 
@@ -156,7 +157,7 @@ def run_facebook_action(action: str, iteration: int) -> bool:
     运行一次Facebook行为（登录 → 访问 → 执行 → 退出）
 
     Args:
-        action: 行为类型（like/comment/share/browse）
+        action: 行为类型（like/comment/share/post/browse）
         iteration: 当前迭代次数
 
     Returns:
@@ -181,9 +182,10 @@ def run_facebook_action(action: str, iteration: int) -> bool:
 
             # 根据action执行行为
             if action == "like":
+                # 浏览并点赞1次
                 facebook_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_posts=5,
+                    max_posts=2,
                     interaction_rate=0.3,
                     enable_like=True,
                     enable_comment=False,
@@ -191,31 +193,63 @@ def run_facebook_action(action: str, iteration: int) -> bool:
                 )
 
             elif action == "comment":
-                comment_templates = facebook_bot_smart.get_comment_templates()
+                # 浏览并评论1次（comment_templates内置在函数中）
                 facebook_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_posts=5,
+                    max_posts=2,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=True,
-                    enable_share=False,
-                    comment_templates=comment_templates
+                    enable_share=False
                 )
 
             elif action == "share":
+                # 浏览并分享1次（share_templates内置在函数中）
                 facebook_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_posts=5,
+                    max_posts=2,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=False,
                     enable_share=True
                 )
 
-            elif action == "browse":
+            elif action == "post":
+                # 发布一条新帖子
+                post_templates = [
+                    "Just finished an amazing workout session! Feeling energized and ready to take on the day! 💪",
+                    "Grateful for all the wonderful people in my life. Sometimes it's the little things that matter most. ❤️",
+                    "Beautiful sunset today! Nature never fails to amaze me. 🌅",
+                    "Coffee and good vibes - that's all I need to start the day right! ☕",
+                    "Excited to share that I've reached a personal milestone today. Hard work really does pay off! 🎉",
+                    "Taking time to appreciate the present moment. Life moves fast, so it's important to slow down sometimes. 🧘",
+                    "Just discovered a new favorite spot in the city. Can't wait to go back! 📍",
+                    "Finished reading an incredible book today. Highly recommend it to anyone looking for inspiration! 📚",
+                    "Sometimes you just need to step back and appreciate how far you've come. Proud of the progress! 🌟",
+                    "Weekend plans: relaxation and recharging. Self-care isn't selfish! 🛀",
+                ]
+                content = random.choice(post_templates)
+
+                # 执行发帖
+                if not facebook_bot_smart.create_post(driver, content):
+                    logger.warning(f"[Iteration {iteration}] Post action failed")
+                    return False
+
+                # 发帖后浏览3条帖子
                 facebook_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_posts=10,
+                    max_posts=3,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False
+                )
+
+            elif action == "browse":
+                # 纯浏览，不互动
+                facebook_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_posts=3,
                     interaction_rate=0.0,
                     enable_like=False,
                     enable_comment=False,
@@ -268,45 +302,46 @@ def run_tiktok_action(action: str, iteration: int) -> bool:
 
             # 根据action执行行为
             if action == "like":
+                # 浏览并点赞1次
                 tiktok_bot.smart_browse_and_interact(
                     driver,
-                    max_videos=5,
+                    max_videos=2,
                     interaction_rate=0.3,
                     enable_like=True,
-                    enable_comment=False,
-                    enable_share=False
+                    enable_comment=False
                 )
 
             elif action == "comment":
+                # 浏览并评论1次
                 comment_templates = tiktok_bot.get_comment_templates()
                 tiktok_bot.smart_browse_and_interact(
                     driver,
-                    max_videos=5,
+                    max_videos=2,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=True,
-                    enable_share=False,
                     comment_templates=comment_templates
                 )
 
             elif action == "share":
+                # TikTok 暂不支持 share 功能
+                logger.warning(f"[Iteration {iteration}] TikTok share not yet implemented, fallback to browse")
                 tiktok_bot.smart_browse_and_interact(
                     driver,
-                    max_videos=5,
-                    interaction_rate=0.3,
+                    max_videos=2,
+                    interaction_rate=0.0,
                     enable_like=False,
-                    enable_comment=False,
-                    enable_share=True
+                    enable_comment=False
                 )
 
             elif action == "browse":
+                # 纯浏览，不互动
                 tiktok_bot.smart_browse_and_interact(
                     driver,
-                    max_videos=10,
+                    max_videos=3,
                     interaction_rate=0.0,
                     enable_like=False,
-                    enable_comment=False,
-                    enable_share=False
+                    enable_comment=False
                 )
 
             else:
@@ -351,7 +386,17 @@ def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
     logger.info("="*70)
 
     success_count = 0
-    manager = CaptureManager()
+
+    # 根据平台创建专属输出目录
+    platform_output_dir = f"output/captures/{platform}"
+    os.makedirs(platform_output_dir, exist_ok=True)
+
+    # 创建自定义配置，指定平台专属输出目录
+    config = CaptureConfig()
+    config.local_output_dir = platform_output_dir
+
+    # 使用自定义配置创建 CaptureManager
+    manager = CaptureManager(config=config)
 
     # 选择bot执行函数
     if platform == "weibo":
@@ -463,7 +508,7 @@ def main():
 
 支持的行为:
   - weibo: like, comment, repost, post, browse
-  - facebook: like, comment, share, browse
+  - facebook: like, comment, share, post, browse
   - tiktok: like, comment, share, browse
         """
     )
@@ -500,7 +545,7 @@ def main():
     # 验证action对于当前platform是否有效
     valid_actions = {
         'weibo': ['like', 'comment', 'repost', 'post', 'browse'],
-        'facebook': ['like', 'comment', 'share', 'browse'],
+        'facebook': ['like', 'comment', 'share', 'post', 'browse'],
         'tiktok': ['like', 'comment', 'share', 'browse'],
     }
 

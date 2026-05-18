@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -u
 # -*- coding: utf-8 -*-
 """
 批量抓包控制脚本
@@ -16,6 +16,9 @@
 
 import sys
 import os
+
+# 禁用输出缓冲（确保日志实时显示）
+sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 import time
 import random
 import logging
@@ -87,10 +90,11 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 10),
-            ('comment', 10),
-            ('share', 10),
-            ('browse', 10),
+            ('like', 250),
+            ('comment', 150),
+            ('share', 50),     # Facebook 使用 share 而不是 repost
+            ('post', 25),      # 发帖少一点
+            ('browse', 500),
         ]
     },
 
@@ -98,10 +102,9 @@ CAPTURE_PLANS = {
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
-            ('like', 10),
-            ('comment', 10),
-            ('share', 10),
-            ('browse', 10),
+            ('like', 100),
+            ('comment', 50),
+            ('browse', 500),
         ]
     },
 }
@@ -449,12 +452,12 @@ class BatchController:
     def cleanup_vps_zombie_processes(self):
         """清理VPS上的僵尸tcpdump进程"""
         try:
-            # 检查是否有僵尸tcpdump进程
+            # 检查是否有僵尸tcpdump进程（增加超时到30秒）
             result = subprocess.run(
                 ["ssh", "root@216.167.34.54", "ps aux | grep tcpdump | grep -v grep | wc -l"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=30
             )
 
             zombie_count = int(result.stdout.strip())
@@ -462,10 +465,10 @@ class BatchController:
                 self.logger.warning(f"⚠️  Found {zombie_count} zombie tcpdump process(es) on VPS")
                 self.logger.info("🧹 Cleaning up zombie processes...")
 
-                # 杀死所有tcpdump进程
+                # 杀死所有tcpdump进程（增加超时到30秒）
                 subprocess.run(
                     ["ssh", "root@216.167.34.54", "pkill -9 tcpdump"],
-                    timeout=10
+                    timeout=30
                 )
 
                 time.sleep(1)

@@ -226,19 +226,17 @@ class CaptureManager:
                 self._logger.info("Remote capture stopped")
 
                 # === 第4步：下载VPS端pcap到本地 ===
-                # 生成本地VPS目录路径（与local_output_dir平级）
-                # local_output_dir = "output/captures" -> local_vps_dir = "output/vps"
-                base_output_dir = os.path.dirname(self._config.local_output_dir)
-                if not base_output_dir:  # 如果是顶级目录（如"captures"），使用当前目录
-                    base_output_dir = "output"
+                # VPS文件按平台保存到 output/vps/{platform}/ 目录
+                # 从 local_output_dir 提取平台名称
+                # 例如：output/captures/weibo -> platform=weibo
+                platform = os.path.basename(self._config.local_output_dir)
 
-                local_vps_dir = os.path.join(base_output_dir, "vps")
-
-                # 转换为绝对路径（基于当前工作目录）
-                local_vps_dir = os.path.abspath(local_vps_dir)
+                # 构建 VPS 输出目录：output/vps/{platform}
+                base_dir = os.path.dirname(os.path.dirname(self._config.local_output_dir))  # output/captures -> output
+                local_vps_dir = os.path.join(base_dir, "vps", platform)
                 os.makedirs(local_vps_dir, exist_ok=True)
 
-                # 本地文件路径（保持原文件名）
+                # VPS 文件路径
                 local_vps_path = os.path.join(local_vps_dir, os.path.basename(remote_path))
 
                 self._logger.info(f"Downloading VPS pcap: {remote_path} -> {local_vps_path}")
