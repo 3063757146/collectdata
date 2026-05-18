@@ -34,7 +34,7 @@
 ```
 ┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌──────────┐
 │  浏览器     │─────▶│ Xray客户端   │─────▶│  VPS Xray   │─────▶│  微博    │
-│  Selenium   │      │ SOCKS5:10818 │      │ 服务端      │      │  服务器  │
+│  Selenium   │      │ SOCKS5:端口 │      │ 服务端      │      │  服务器  │
 └─────────────┘      └──────────────┘      └─────────────┘      └──────────┘
     Mac本地              本地代理              加密隧道            目标网站
                                            (VLESS+Reality)
@@ -56,10 +56,10 @@
 ### VPS 基本信息
 
 ```yaml
-服务器IP: 216.167.34.54
+服务器IP: vps-ip
 系统: Ubuntu/Debian
 网络接口:
-  - eth0: 216.167.34.54 (外网)
+  - eth0: vps-ip (外网)
   - eth1: 10.0.4.59 (内网)
 端口: 443 (HTTPS伪装)
 ```
@@ -140,7 +140,7 @@ ufw enable
 
 ```
 协议: VLESS
-地址: 216.167.34.54
+地址: vps-ip
 端口: 443
 UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Flow: xtls-rprx-vision
@@ -169,7 +169,7 @@ chmod +x ~/xray/xray
 ```json
 {
   "inbounds": [{
-    "port": 10818,           // 本地 SOCKS5 端口
+    "port": 端口,           // 本地 SOCKS5 端口
     "protocol": "socks",
     "settings": {
       "auth": "noauth",
@@ -180,7 +180,7 @@ chmod +x ~/xray/xray
     "protocol": "vless",
     "settings": {
       "vnext": [{
-        "address": "216.167.34.54",
+        "address": "vps-ip",
         "port": 443,
         "users": [{
           "id": "UUID",
@@ -210,8 +210,8 @@ chmod +x ~/xray/xray
 nohup ~/xray/xray -config ~/xray/config.json > ~/xray/xray.log 2>&1 &
 
 # 测试连接
-curl --socks5 127.0.0.1:10818 https://api.ipify.org
-# 应返回: 216.167.34.54
+curl --socks5 127.0.0.1:端口 https://api.ipify.org
+# 应返回: vps-ip
 ```
 
 ### Python 环境
@@ -252,7 +252,7 @@ def create_driver(use_proxy=True):
     
     # 关键配置：通过 SOCKS5 代理
     if use_proxy:
-        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
+        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:端口')
     
     # 反自动化检测
     chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
@@ -568,7 +568,7 @@ time.sleep(random.uniform(2, 5))
 ┌──────────┐   SOCKS5    ┌─────────┐   VLESS    ┌─────┐   HTTPS   ┌──────┐
 │ 浏览器   │ ────────▶  │  Xray   │ ────────▶ │ VPS │ ────────▶│ 微博 │
 │ Chrome   │  127.0.0.1  │ 客户端  │  加密隧道  │Xray │  明文/TLS │      │
-└──────────┘   :10818    └─────────┘           └─────┘           └──────┘
+└──────────┘   :端口    └─────────┘           └─────┘           └──────┘
                                                   │
                                                   │ tcpdump
                                                   ▼
@@ -606,7 +606,7 @@ tcpdump -i eth0 -w /tmp/weibo.pcap 'host weibo.com or host weibo.cn'
 3. 开始抓包
 4. 运行脚本
 5. 停止抓包
-6. 过滤器: ip.addr == 216.167.34.54
+6. 过滤器: ip.addr == vps-ip
 ```
 
 **能看到的内容**：
@@ -621,19 +621,19 @@ tcpdump -i eth0 -w /tmp/weibo.pcap 'host weibo.com or host weibo.cn'
 # 安装
 pip3 install mitmproxy
 
-# 启动（Web 界面）
+# 启动（Web 界面
 mitmweb --web-host 0.0.0.0 --web-port 8081
 
-# 访问: http://216.167.34.54:8081
+# 访问: http://vps-ip:8081
 ```
 
 **Mac 本地配置**：
 ```bash
 # 启动 mitmproxy（上游代理）
-mitmproxy --mode upstream:socks5://127.0.0.1:10818
+mitmproxy --mode upstream:socks5://127.0.0.1:端口
 
 # 或者 Web 界面
-mitmweb --mode upstream:socks5://127.0.0.1:10818 --web-host 127.0.0.1 --web-port 8081
+mitmweb --mode upstream:socks5://127.0.0.1:端口 --web-host 127.0.0.1 --web-port 8081
 
 # 安装证书: http://mitm.it
 ```
@@ -663,7 +663,7 @@ tcpdump -i eth0 -w /tmp/like_test.pcap 'host weibo.com'
 
 3. **下载分析**：
 ```bash
-scp root@216.167.34.54:/tmp/like_test.pcap ~/Desktop/
+scp root@vps-ip:/tmp/like_test.pcap ~/Desktop/
 ```
 
 4. **Wireshark 过滤**：
@@ -828,7 +828,7 @@ interacted_weibo_ids.add(weibo_id)
 
 ✅ **双端配置**
 - VPS: Xray 服务端（端口 443）
-- Mac: Xray 客户端（SOCKS5: 10818）
+- Mac: Xray 客户端（SOCKS5: 端口）
 
 ### 2. 自动化技术
 
@@ -874,7 +874,7 @@ interacted_weibo_ids.add(weibo_id)
 - mitmproxy：HTTPS 解密（详细分析）
 
 ✅ **Wireshark 技巧**
-- 过滤器：`ip.addr == 216.167.34.54`
+- 过滤器：`ip.addr == vps-ip`
 - TLS SNI：`tls.handshake.extensions_server_name`
 - DNS：`dns`
 
@@ -997,7 +997,7 @@ journalctl -u xray -f
 nohup ~/xray/xray -config ~/xray/config.json > ~/xray/xray.log 2>&1 &
 
 # 测试连接
-curl --socks5 127.0.0.1:10818 https://api.ipify.org
+curl --socks5 127.0.0.1:端口 https://api.ipify.org
 
 # 查看进程
 ps aux | grep xray
@@ -1009,7 +1009,7 @@ ps aux | grep xray
 timeout 60 tcpdump -i eth0 -w /tmp/capture.pcap 'not port 22'
 
 # 下载到本地
-scp root@216.167.34.54:/tmp/capture.pcap ~/Desktop/
+scp root@vps-ip:/tmp/capture.pcap ~/Desktop/
 
 # 实时查看
 tcpdump -i eth0 -n 'host weibo.com'
