@@ -225,12 +225,38 @@ class CaptureManager:
                 remote_path = self._remote.stop()
                 self._logger.info("Remote capture stopped")
 
-                # === 保存VPS端pcap路径（不下载到本地）===
-                self._vps_pcap = remote_path  # VPS上的远程路径
-                self._logger.info(f"Remote pcap saved on VPS: {remote_path}")
+                # === 第4步：下载VPS端pcap到本地 ===
+                # 生成本地VPS目录路径（与local_output_dir平级）
+                # local_output_dir = "output/captures" -> local_vps_dir = "output/vps"
+                base_output_dir = os.path.dirname(self._config.local_output_dir)
+                if not base_output_dir:  # 如果是顶级目录（如"captures"），使用当前目录
+                    base_output_dir = "output"
+
+                local_vps_dir = os.path.join(base_output_dir, "vps")
+
+                # 转换为绝对路径（基于当前工作目录）
+                local_vps_dir = os.path.abspath(local_vps_dir)
+                os.makedirs(local_vps_dir, exist_ok=True)
+
+                # 本地文件路径（保持原文件名）
+                local_vps_path = os.path.join(local_vps_dir, os.path.basename(remote_path))
+
+                self._logger.info(f"Downloading VPS pcap: {remote_path} -> {local_vps_path}")
+                self._remote.download(local_vps_path)
+
+                # 验证文件下载成功
+                if os.path.exists(local_vps_path):
+                    file_size = os.path.getsize(local_vps_path)
+                    self._logger.info(f"✅ VPS pcap downloaded: {local_vps_path} ({file_size / 1024 / 1024:.2f} MB)")
+                    self._vps_pcap = local_vps_path  # 保存本地路径
+                else:
+                    self._logger.error(f"❌ VPS pcap download failed: file not found")
+                    self._vps_pcap = remote_path  # 降级：保存远程路径
 
             except Exception as e:
-                self._logger.error(f"Failed to stop remote capture: {e}")
+                self._logger.error(f"Failed to stop/download remote capture: {e}")
+                import traceback
+                traceback.print_exc()
                 self._vps_pcap = None
 
         # === 第5步：构建结果 ===

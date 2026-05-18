@@ -64,11 +64,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 30),
-            ('comment', 10),
-            ('repost', 10),
-            ('post', 5),      # 发帖少一点
-            ('browse', 80),
+            ('like', 250),
+            ('comment', 150),
+            ('repost', 50),
+            ('post', 25),      # 发帖少一点
+            ('browse', 500),
         ]
     },
 
@@ -114,17 +114,17 @@ class TimingConfig:
     """时间控制配置"""
 
     # 同一行为之间的最小间隔（秒）- 避免连续相同行为
-    SAME_ACTION_MIN_INTERVAL = 300  # 5分钟
-    SAME_ACTION_MAX_INTERVAL = 900  # 15分钟
+    SAME_ACTION_MIN_INTERVAL = 30  # 5分钟
+    SAME_ACTION_MAX_INTERVAL = 60  # 15分钟
 
     # 不同行为之间的间隔（秒）
-    DIFF_ACTION_MIN_INTERVAL = 120  # 2分钟
-    DIFF_ACTION_MAX_INTERVAL = 300  # 5分钟
+    DIFF_ACTION_MIN_INTERVAL = 20  # 2分钟
+    DIFF_ACTION_MAX_INTERVAL = 40  # 5分钟
 
     # 休息时段（每采集N次后休息一段时间）
-    REST_AFTER_TASKS = 10           # 每10次任务后休息
-    REST_MIN_DURATION = 1800        # 休息30分钟
-    REST_MAX_DURATION = 3600        # 休息1小时
+    REST_AFTER_TASKS = 20           # 每10次任务后休息
+    REST_MIN_DURATION = 180        # 休息30分钟
+    REST_MAX_DURATION = 300        # 休息1小时
 
     # 单次抓包超时（秒）
     CAPTURE_TIMEOUT = 600           # 10分钟

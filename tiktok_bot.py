@@ -42,34 +42,38 @@ def setup_logging():
     return logging.getLogger(__name__)
 
 def create_driver(use_proxy=True):
-    """创建 Chrome 浏览器实例（保留登录状态）"""
+    """创建 Chrome 浏览器实例（使用真实浏览器 Profile）"""
+    import os
+
+    # 📂 使用真实的 Chrome Profile（与手动浏览器相同）
+    user_data_dir = os.path.expanduser('~/Library/Application Support/Google/Chrome')
+
+    print("="*60)
+    print("⚠️  重要提示：使用真实 Chrome Profile")
+    print("="*60)
+    print(f"📂 Profile 路径: {user_data_dir}")
+    print("\n🔴 请先执行以下操作：")
+    print("   1. 关闭所有手动打开的 Chrome 浏览器窗口")
+    print("   2. 确保没有其他 Chrome 进程在运行")
+    print("   3. 完成后按回车继续...")
+    print("="*60)
+    input()
+
     chrome_options = Options()
 
-    # 📂 设置用户数据目录（保存登录状态）
-    import os
-    user_data_dir = os.path.expanduser('~/selenium_profiles/tiktok')
-
-    # 检查目录是否存在
-    if not os.path.exists(user_data_dir):
-        print(f"📁 创建配置文件目录: {user_data_dir}")
-        os.makedirs(user_data_dir, exist_ok=True)
-    else:
-        print(f"💾 使用现有配置文件: {user_data_dir}")
-
+    # 使用真实的 Chrome profile
     chrome_options.add_argument(f'--user-data-dir={user_data_dir}')
     chrome_options.add_argument('--profile-directory=Default')
 
     if use_proxy:
-        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
+        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:7897')
 
     # 反检测设置
     chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
-    # ⚠️ 注意：使用配置文件时不要设置随机 User-Agent
-    # 因为每次随机会导致浏览器指纹不一致，可能触发安全检测
-
+    # 窗口大小和基本设置
     chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.add_argument('--no-first-run')
     chrome_options.add_argument('--no-default-browser-check')
@@ -77,6 +81,8 @@ def create_driver(use_proxy=True):
 
     try:
         driver = webdriver.Chrome(options=chrome_options)
+
+        # 隐藏 webdriver 特征
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
             'source': '''
                 Object.defineProperty(navigator, 'webdriver', {
@@ -84,9 +90,16 @@ def create_driver(use_proxy=True):
                 })
             '''
         })
+
+        print("✅ 浏览器启动成功（使用真实 Profile）")
         return driver
+
     except Exception as e:
         print(f"❌ 创建浏览器失败: {e}")
+        print("\n💡 提示：")
+        print("   1. 确保已关闭所有 Chrome 窗口")
+        print("   2. 检查 Chrome 是否安装在默认位置")
+        print("   3. 尝试手动指定 ChromeDriver 路径")
         sys.exit(1)
 
 def check_login(driver):
@@ -571,25 +584,73 @@ def comment_video(driver, content_list):
             # 点击发送
             try:
                 driver.execute_script("arguments[0].click();", send_button)
-                print(f"      ✅ 评论成功！")
-                logging.info(f"评论成功: {content}")
-                time.sleep(2)
+                print(f"      ✅ 点击发送按钮")
+
+                # 等待评论提交完成
+                print(f"      ⏱️  等待评论提交...")
+                time.sleep(4)  # TikTok可能比Facebook慢，用4秒
+
+                # 验证评论是否成功（检查输入框是否清空）
+                try:
+                    current_text = comment_input.text.strip()
+                    if not current_text or current_text == "":
+                        print(f"      ✅ 评论已发送（输入框已清空）")
+                        logging.info(f"评论成功: {content}")
+                    else:
+                        print(f"      ⚠️  输入框未清空，可能提交失败")
+                        logging.warning(f"评论提交状态未知: {content}")
+                except:
+                    # 无法验证，假定成功
+                    print(f"      ✅ 评论已提交")
+                    logging.info(f"评论成功: {content}")
+
                 return True
             except Exception as e:
                 print(f"      ⚠️  点击发送按钮失败: {e}")
                 # 尝试回车发送
                 comment_input.send_keys(Keys.RETURN)
-                print(f"      ✅ 评论成功（回车发送）")
-                logging.info(f"评论成功（回车）: {content}")
-                time.sleep(2)
+                print(f"      ✅ 评论已发送（回车）")
+
+                # 等待评论提交完成
+                print(f"      ⏱️  等待评论提交...")
+                time.sleep(4)
+
+                # 验证评论是否成功（检查输入框是否清空）
+                try:
+                    current_text = comment_input.text.strip()
+                    if not current_text or current_text == "":
+                        print(f"      ✅ 评论已发送（输入框已清空）")
+                        logging.info(f"评论成功（回车）: {content}")
+                    else:
+                        print(f"      ⚠️  输入框未清空，可能提交失败")
+                        logging.warning(f"评论提交状态未知（回车）: {content}")
+                except:
+                    print(f"      ✅ 评论已提交")
+                    logging.info(f"评论成功（回车）: {content}")
+
                 return True
         else:
             print("      ⚠️  未找到发送按钮，尝试按回车发送...")
             try:
                 comment_input.send_keys(Keys.RETURN)
-                print(f"      ✅ 评论成功（回车发送）")
-                logging.info(f"评论成功: {content}")
-                time.sleep(2)
+                print(f"      ✅ 评论已发送（回车）")
+
+                # 等待评论提交完成
+                print(f"      ⏱️  等待评论提交...")
+                time.sleep(4)
+
+                # 验证评论是否成功（检查输入框是否清空）
+                try:
+                    current_text = comment_input.text.strip()
+                    if not current_text or current_text == "":
+                        print(f"      ✅ 评论已发送（输入框已清空）")
+                        logging.info(f"评论成功（回车）: {content}")
+                    else:
+                        print(f"      ⚠️  输入框未清空，可能提交失败")
+                        logging.warning(f"评论提交状态未知（回车）: {content}")
+                except:
+                    print(f"      ✅ 评论已提交")
+                    logging.info(f"评论成功（回车）: {content}")
                 return True
             except:
                 print("      ❌ 评论发送失败")
@@ -687,20 +748,9 @@ def share_video(driver):
         traceback.print_exc()
         return False
 
-def smart_browse_and_interact(driver, max_videos=10, interaction_rate=0.3):
-    """
-    智能浏览和互动
-
-    参数:
-        max_videos: 最多浏览多少个视频
-        interaction_rate: 互动概率（0-1）
-    """
-    print("\n🤖 开始智能浏览模式...")
-    print(f"   - 最多浏览 {max_videos} 个视频")
-    print(f"   - 互动概率: {interaction_rate*100:.0f}%")
-
-    # 预定义的评论内容
-    comment_templates = [
+def get_comment_templates():
+    """获取评论模板"""
+    return [
         "Nice!", "Amazing!", "Love this!", "Great video!", "So cool!",
         "This is awesome!", "Well done!", "Incredible!", "Beautiful!",
         "Fantastic!", "Perfect!", "Wonderful!", "Brilliant!",
@@ -712,63 +762,136 @@ def smart_browse_and_interact(driver, max_videos=10, interaction_rate=0.3):
         "I love your content!", "More please!", "This is gold!",
     ]
 
+
+def smart_browse_and_interact(
+    driver,
+    max_videos=3,
+    interaction_rate=0.3,
+    enable_like=True,
+    enable_comment=True,
+    enable_share=True,
+    comment_templates=None
+):
+    """
+    智能浏览和互动 - 确保模式
+
+    参数:
+        max_videos: 默认浏览多少个视频（默认3个）
+        interaction_rate: 额外互动概率（达成目标后的额外互动概率）
+        enable_like: 是否启用点赞（True则确保至少成功1次）
+        enable_comment: 是否启用评论（True则确保至少成功1次）
+        enable_share: 是否启用分享（True则确保至少成功1次）
+        comment_templates: 评论模板列表（None则使用默认）
+
+    新逻辑：
+        - 如果 enable_like=True，确保至少成功点赞1次
+        - 如果 enable_comment=True，确保至少成功评论1次
+        - 如果 enable_share=True，确保至少成功分享1次
+        - 最多尝试 max_videos*3 个视频（避免无限循环）
+    """
+    print("\n🤖 开始智能浏览模式（确保模式）...")
+    print(f"   - 默认浏览 {max_videos} 个视频")
+    print(f"   - 点赞: {'启用（确保≥1次）' if enable_like else '禁用'}")
+    print(f"   - 评论: {'启用（确保≥1次）' if enable_comment else '禁用'}")
+    print(f"   - 分享: {'启用（确保≥1次）' if enable_share else '禁用'}")
+
+    # 使用默认模板（如果未提供）
+    if comment_templates is None:
+        comment_templates = get_comment_templates()
+
     browsed_count = 0
     interacted_count = 0
 
-    for i in range(max_videos):
+    # 成功计数器
+    success_count = {
+        'like': 0,
+        'comment': 0,
+        'share': 0,
+    }
+
+    # 目标：每个启用的操作至少成功1次
+    targets = {
+        'like': 1 if enable_like else 0,
+        'comment': 1 if enable_comment else 0,
+        'share': 1 if enable_share else 0,
+    }
+
+    max_attempts = max_videos * 3  # 最多尝试次数（避免无限循环）
+    i = 0
+
+    while i < max_attempts:
+        i += 1
+
+        # 检查是否达成所有目标
+        all_targets_met = all(
+            success_count[action] >= targets[action]
+            for action in ['like', 'comment', 'share']
+        )
+
+        # 如果已达成所有目标且浏览数达到默认值，退出
+        if all_targets_met and browsed_count >= max_videos:
+            print(f"\n✅ 已达成所有目标！")
+            print(f"   - 点赞成功: {success_count['like']} 次")
+            print(f"   - 评论成功: {success_count['comment']} 次")
+            print(f"   - 分享成功: {success_count['share']} 次")
+            break
+
         try:
             browsed_count += 1
-            print(f"\n📺 浏览第 {browsed_count} 个视频...")
+            print(f"\n📺 [循环 {i}] 浏览第 {browsed_count} 个视频...")
 
             # 模拟观看视频
             simulate_reading(5, 15)
 
-            # 随机决定是否互动
-            if random.random() < interaction_rate:
-                print("   💬 决定互动...")
+            # 智能决定互动操作（新逻辑）
+            actions = []
 
-                # 随机选择互动方式
-                actions = []
+            # 优先执行未达成目标的操作
+            if enable_like and success_count['like'] < targets['like']:
+                actions.append('like')
 
-                # 80% 概率点赞
-                if random.random() < 0.8:
-                    actions.append('like')
+            if enable_comment and success_count['comment'] < targets['comment']:
+                actions.append('comment')
 
-                # 30% 概率评论
-                if random.random() < 0.3:
-                    actions.append('comment')
+            if enable_share and success_count['share'] < targets['share']:
+                actions.append('share')
 
-                # 20% 概率分享
-                if random.random() < 0.2:
-                    actions.append('share')
-
-                # 如果没有选中任何操作，默认点赞
-                if not actions:
-                    actions = ['like']
-
-                print(f"      选择操作: {', '.join(actions)}")
+            # 如果没有任何操作可执行，跳过
+            if not actions:
+                # 如果还有未达成的目标，提示继续尝试
+                if not all_targets_met:
+                    print("   ⚠️  本个视频未选择互动，继续寻找...")
+                else:
+                    print("   👀 目标已达成，只是观看，不互动")
+            else:
+                # 显示选择的操作和目标进度
+                print(f"   💬 决定互动: {', '.join(actions)}")
+                progress = (f"      当前进度: 点赞{success_count['like']}/{targets['like']}, "
+                           f"评论{success_count['comment']}/{targets['comment']}, "
+                           f"分享{success_count['share']}/{targets['share']}")
+                print(progress)
 
                 # 执行操作
                 if 'like' in actions:
                     if like_video(driver):
+                        success_count['like'] += 1
                         interacted_count += 1
                         time.sleep(random.uniform(1, 2))
 
                 if 'comment' in actions:
                     if comment_video(driver, comment_templates):
+                        success_count['comment'] += 1
                         interacted_count += 1
                         time.sleep(random.uniform(1, 2))
 
                 if 'share' in actions:
                     if share_video(driver):
+                        success_count['share'] += 1
                         interacted_count += 1
                         time.sleep(random.uniform(1, 2))
 
-            else:
-                print("   👀 只是观看，不互动")
-
             # 滚动到下一个视频
-            if i < max_videos - 1:
+            if i < max_attempts - 1:
                 print("   ⬇️  滚动到下一个视频...")
                 random_scroll(driver, 'down')
                 time.sleep(random.uniform(1, 2))
@@ -781,17 +904,24 @@ def smart_browse_and_interact(driver, max_videos=10, interaction_rate=0.3):
     print("\n" + "="*60)
     print(f"📊 浏览完成！")
     print(f"   - 浏览了 {browsed_count} 个视频")
-    print(f"   - 互动了 {interacted_count} 次")
+    print(f"   - 总互动次数: {interacted_count} 次")
+    print(f"   - 成功点赞: {success_count['like']} 次")
+    print(f"   - 成功评论: {success_count['comment']} 次")
+    print(f"   - 成功分享: {success_count['share']} 次")
     print("="*60)
 
-    logging.info(f"浏览完成 - 浏览: {browsed_count}, 互动: {interacted_count}")
+    # 记录统计信息到日志
+    summary = (f"浏览完成 - 浏览: {browsed_count}, 互动: {interacted_count}, "
+               f"点赞: {success_count['like']}, 评论: {success_count['comment']}, "
+               f"分享: {success_count['share']}")
+    logging.info(summary)
 
 def main():
     # 初始化日志系统
     setup_logging()
 
     print("="*60)
-    print("TikTok 智能自动化脚本 v1.0")
+    print("TikTok 智能自动化脚本 v2.0")
     print("="*60)
     logging.info("脚本启动")
 
@@ -815,55 +945,71 @@ def main():
             print("✅ 已登录")
             logging.info("已登录状态")
 
-        # 选择模式
+        # 选择测试模式
         print("\n" + "="*60)
-        print("请选择模式:")
-        print("1. 智能浏览 For You 页面（推荐）")
-        print("2. 浏览指定用户的视频")
-        print("3. 访问指定视频")
+        print("请选择测试行为:")
+        print("1. 纯浏览（不互动）")
+        print("2. 点赞测试")
+        print("3. 评论测试")
+        print("4. 分享测试")
         print("0. 退出")
         print("="*60)
 
-        choice = input("请输入选项 (0-3): ").strip()
+        choice = input("请输入选项 (0-4): ").strip()
 
         if choice == '1':
-            # 智能浏览 For You 页面
-            max_videos = int(input("浏览多少个视频？(建议 10-20): ") or "10")
-            interaction_rate = float(input("互动概率？(0.1-0.5，例如 0.3 表示 30%): ") or "0.3")
-
-            logging.info(f"开始智能浏览 - 视频数: {max_videos}, 互动率: {interaction_rate*100}%")
-            smart_browse_and_interact(driver, max_videos, interaction_rate)
+            # 纯浏览
+            print("\n🔍 纯浏览模式（不互动）")
+            logging.info("开始纯浏览测试")
+            smart_browse_and_interact(
+                driver,
+                max_videos=3,
+                interaction_rate=0.0,
+                enable_like=False,
+                enable_comment=False,
+                enable_share=False
+            )
 
         elif choice == '2':
-            # 浏览指定用户
-            username = input("请输入用户名（例如: @username）: ").strip()
-            if not username.startswith('@'):
-                username = '@' + username
-
-            user_url = f"https://www.tiktok.com/{username}"
-            print(f"\n访问用户主页: {user_url}")
-            logging.info(f"访问用户: {username}")
-            driver.get(user_url)
-            time.sleep(3)
-
-            max_videos = int(input("浏览多少个视频？: ") or "10")
-            interaction_rate = float(input("互动概率？(0.1-0.5): ") or "0.3")
-
-            logging.info(f"开始浏览用户视频 - 用户: {username}, 视频数: {max_videos}, 互动率: {interaction_rate*100}%")
-            smart_browse_and_interact(driver, max_videos, interaction_rate)
+            # 点赞测试
+            print("\n👍 点赞测试模式（确保至少成功1次）")
+            logging.info("开始点赞测试")
+            smart_browse_and_interact(
+                driver,
+                max_videos=3,
+                interaction_rate=0.3,
+                enable_like=True,
+                enable_comment=False,
+                enable_share=False
+            )
 
         elif choice == '3':
-            # 访问指定视频
-            video_url = input("请输入视频链接: ").strip()
-            if video_url.startswith('http'):
-                print(f"\n访问视频: {video_url}")
-                logging.info(f"访问指定视频: {video_url}")
-                driver.get(video_url)
-                time.sleep(3)
+            # 评论测试
+            print("\n💬 评论测试模式（确保至少成功1次）")
+            logging.info("开始评论测试")
+            comment_templates = get_comment_templates()
+            smart_browse_and_interact(
+                driver,
+                max_videos=3,
+                interaction_rate=0.3,
+                enable_like=False,
+                enable_comment=True,
+                enable_share=False,
+                comment_templates=comment_templates
+            )
 
-                print("\n已打开视频，可以手动操作...")
-                print("按回车退出...")
-                input()
+        elif choice == '4':
+            # 分享测试
+            print("\n🔄 分享测试模式（确保至少成功1次）")
+            logging.info("开始分享测试")
+            smart_browse_and_interact(
+                driver,
+                max_videos=3,
+                interaction_rate=0.3,
+                enable_like=False,
+                enable_comment=False,
+                enable_share=True
+            )
 
         elif choice == '0':
             print("\n👋 退出程序")

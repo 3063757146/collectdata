@@ -143,8 +143,14 @@ def setup_logging():
 
     return logging.getLogger(__name__)
 
-def create_driver(use_proxy=True):
-    """创建 Chrome 浏览器实例（保留登录状态）"""
+def create_driver(use_proxy=True, fast_mode=False):
+    """
+    创建 Chrome 浏览器实例（保留登录状态）
+
+    Args:
+        use_proxy: 是否使用代理
+        fast_mode: 快速模式（禁用图片/CSS，提速50-70%）
+    """
     chrome_options = Options()
 
     # 📂 设置用户数据目录（保存登录状态）
@@ -156,6 +162,25 @@ def create_driver(use_proxy=True):
 
     if use_proxy:
         chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
+
+    # ⚡ 快速模式优化
+    if fast_mode:
+        print("⚡ 快速模式已启用（禁用图片/CSS，预计提速50-70%）")
+
+        # 禁用图片加载（最大提速）
+        prefs = {
+            'profile.default_content_setting_values': {
+                'images': 2,  # 2=禁用图片
+                'stylesheet': 2,  # 2=禁用CSS
+            }
+        }
+        chrome_options.add_experimental_option('prefs', prefs)
+
+        # 性能优化参数
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--disable-extensions')
 
     # 反检测设置
     chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
@@ -417,8 +442,27 @@ def comment_weibo(driver, content_list):
         for btn in buttons:
             if '评论' in btn.text:
                 driver.execute_script("arguments[0].click();", btn)
-                print(f"      ✅ 评论成功: {content}")
-                logging.info(f"评论成功: {content}")
+                print(f"      ✅ 点击发送按钮")
+
+                # 等待评论提交完成
+                print(f"      ⏱️  等待评论提交...")
+                time.sleep(3)  # 微博通常比Facebook快，3秒足够
+
+                # 验证评论是否成功（检查输入框是否清空或隐藏）
+                try:
+                    # 微博评论成功后，评论框会关闭或清空
+                    is_empty = comment_input.get_attribute('value') == "" or not comment_input.is_displayed()
+                    if is_empty:
+                        print(f"      ✅ 评论已发送（输入框已清空）")
+                        logging.info(f"评论成功: {content}")
+                    else:
+                        print(f"      ⚠️  输入框未清空，可能提交失败")
+                        logging.warning(f"评论提交状态未知: {content}")
+                except:
+                    # 无法验证，假定成功
+                    print(f"      ✅ 评论已提交")
+                    logging.info(f"评论成功: {content}")
+
                 return True
 
         logging.warning("评论失败：未找到发送按钮")

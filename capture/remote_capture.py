@@ -161,7 +161,7 @@ class RemoteCapture:
         finally:
             remote_path = self._remote_path
             self._pid = None
-            self._remote_path = None
+            # 不要清空 _remote_path，download() 需要它
 
         # 验证远程pcap文件存在
         if remote_path:
@@ -179,7 +179,7 @@ class RemoteCapture:
 
     def download(self, local_path: str) -> str:
         """
-        下载远程pcap文件到本地，然后删除远程文件
+        下载远程pcap文件到本地，验证完整性后删除远程文件
 
         Args:
             local_path: 本地保存路径
@@ -196,16 +196,49 @@ class RemoteCapture:
         self._logger.info(f"Downloading remote pcap: {self._remote_path} -> {local_path}")
 
         try:
-            # 下载文件
+            # 第1步：获取远程文件大小
+            exit_code, remote_size_str, _ = self._ssh.exec_command(
+                f"stat -c %s {self._remote_path} 2>/dev/null || stat -f %z {self._remote_path}"
+            )
+            remote_size = int(remote_size_str.strip()) if exit_code == 0 else None
+
+            if remote_size is not None:
+                self._logger.info(f"Remote file size: {remote_size / 1024 / 1024:.2f} MB")
+
+            # 第2步：下载文件
             self._ssh.download_file(self._remote_path, local_path)
 
-            # 下载成功后删除远程文件
+            # 第3步：验证本地文件
+            import os
+            if not os.path.exists(local_path):
+                raise TcpdumpError(f"Downloaded file not found: {local_path}")
+
+            local_size = os.path.getsize(local_path)
+            self._logger.info(f"Local file size: {local_size / 1024 / 1024:.2f} MB")
+
+            # 第4步：比较文件大小（如果能获取到远程大小）
+            if remote_size is not None:
+                if local_size != remote_size:
+                    raise TcpdumpError(
+                        f"File size mismatch: remote={remote_size}, local={local_size}. "
+                        f"Download may be corrupted!"
+                    )
+                else:
+                    self._logger.info("✅ File size verification passed")
+
+            # 第5步：验证通过后删除远程文件
+            self._logger.info(f"Deleting remote file: {self._remote_path}")
             self._ssh.remove_remote_file(self._remote_path)
+            self._logger.info(f"✅ Remote file deleted successfully")
+
+            # 第6步：清空远程路径状态
+            self._remote_path = None
 
             return local_path
 
         except Exception as e:
             self._logger.error(f"Failed to download remote pcap: {e}")
+            self._logger.error(f"⚠️  Remote file NOT deleted (for safety): {self._remote_path}")
             raise
 
     def is_running(self) -> bool:

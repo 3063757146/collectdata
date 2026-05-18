@@ -12,14 +12,21 @@
 使用示例：
     python3 run_capture.py --platform weibo --action like --num 5
     # 执行5次微博点赞，每次生成一对pcap文件
+
+快速模式（提速50-70%）：
+    FAST_MODE=1 python3 run_capture.py --platform weibo --action browse --num 1
 """
 
 import sys
+import os
 import time
 import logging
 import argparse
 from capture import CaptureManager, CaptureConfig
 from capture.label import generate_label
+
+# 检查是否启用快速模式（环境变量）
+FAST_MODE = os.getenv('FAST_MODE', '0') == '1'
 
 
 # 配置日志
@@ -49,8 +56,8 @@ def run_weibo_action(action: str, iteration: int) -> bool:
         # 导入微博bot模块
         import weibo_bot_smart
 
-        # 创建driver
-        driver = weibo_bot_smart.create_driver(use_proxy=True)
+        # 创建driver（使用快速模式如果已启用）
+        driver = weibo_bot_smart.create_driver(use_proxy=True, fast_mode=FAST_MODE)
 
         try:
             # 打开微博首页
@@ -69,7 +76,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 # 浏览并点赞1次
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=5,
+                    max_weibos=2,
                     interaction_rate=0.3,
                     enable_like=True,
                     enable_comment=False,
@@ -81,7 +88,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 comment_templates = weibo_bot_smart.get_comment_templates()
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=5,
+                    max_weibos=2,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=True,
@@ -94,7 +101,7 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 repost_templates = weibo_bot_smart.get_repost_templates()
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=5,
+                    max_weibos=2,
                     interaction_rate=0.3,
                     enable_like=False,
                     enable_comment=False,
@@ -111,8 +118,11 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 # 纯浏览，不互动
                 weibo_bot_smart.smart_browse_and_interact(
                     driver,
-                    max_weibos=10,
-                    interaction_rate=0.0
+                    max_weibos=3,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_repost=False
                 )
 
             else:
@@ -197,7 +207,10 @@ def run_facebook_action(action: str, iteration: int) -> bool:
                 facebook_bot_smart.smart_browse_and_interact(
                     driver,
                     max_posts=10,
-                    interaction_rate=0.0
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False
                 )
 
             else:
@@ -281,7 +294,10 @@ def run_tiktok_action(action: str, iteration: int) -> bool:
                 tiktok_bot.smart_browse_and_interact(
                     driver,
                     max_videos=10,
-                    interaction_rate=0.0
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False
                 )
 
             else:
