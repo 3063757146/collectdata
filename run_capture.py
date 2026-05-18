@@ -110,9 +110,18 @@ def run_weibo_action(action: str, iteration: int) -> bool:
                 )
 
             elif action == "post":
-                # 发布一条新微博
+                # 发布一条新微博（使用统一的 smart_browse_and_interact 接口）
                 post_templates = weibo_bot_smart.get_post_templates()
-                weibo_bot_smart.post_weibo(driver, post_templates)
+                weibo_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_weibos=3,  # 只需要发1条微博
+                    interaction_rate=0.0,  # 不需要额外互动
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_repost=False,
+                    enable_post=True,  # 启用发帖（确保至少成功1次）
+                    post_templates=post_templates
+                )
 
             elif action == "browse":
                 # 纯浏览，不互动

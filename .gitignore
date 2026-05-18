@@ -4,7 +4,7 @@ output/
 
 # 配置文件（包含账号信息）
 z账号配置.txt
-
+config.json
 # Python
 __pycache__/
 *.py[cod]

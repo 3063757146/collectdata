@@ -921,7 +921,7 @@ def smart_browse_and_interact(
                     posted_count += 1
                     print("   ✅ 发帖成功！")
                     # 发帖后等待较长时间（模拟真人发帖后的停顿）
-                    wait_time = random.uniform(15, 25)
+                    wait_time = random.uniform(5, 10)
                     print(f"   ⏱️  发帖后暂停 {wait_time:.1f} 秒...")
                     time.sleep(wait_time)
 

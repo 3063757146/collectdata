@@ -446,8 +446,41 @@ class BatchController:
         # 开始时间
         self.start_time = time.time()
 
+    def cleanup_vps_zombie_processes(self):
+        """清理VPS上的僵尸tcpdump进程"""
+        try:
+            # 检查是否有僵尸tcpdump进程
+            result = subprocess.run(
+                ["ssh", "root@216.167.34.54", "ps aux | grep tcpdump | grep -v grep | wc -l"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            zombie_count = int(result.stdout.strip())
+            if zombie_count > 0:
+                self.logger.warning(f"⚠️  Found {zombie_count} zombie tcpdump process(es) on VPS")
+                self.logger.info("🧹 Cleaning up zombie processes...")
+
+                # 杀死所有tcpdump进程
+                subprocess.run(
+                    ["ssh", "root@216.167.34.54", "pkill -9 tcpdump"],
+                    timeout=10
+                )
+
+                time.sleep(1)
+                self.logger.info("✅ VPS cleanup completed")
+            else:
+                self.logger.info("✅ No zombie processes on VPS")
+
+        except Exception as e:
+            self.logger.warning(f"⚠️  VPS cleanup failed (non-critical): {e}")
+
     def run(self):
         """运行批量采集"""
+        # 清理VPS僵尸进程
+        self.cleanup_vps_zombie_processes()
+
         self.logger.info("="*70)
         self.logger.info(f"📌 Total tasks: {self.scheduler.total_tasks}")
         self.logger.info("="*70)
