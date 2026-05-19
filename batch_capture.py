@@ -28,6 +28,10 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional
 from collections import defaultdict
 
+# 导入抓包模块（用于SSH自动登录）
+from capture.ssh_client import SSHController
+from capture.config import CaptureConfig
+
 
 # ============================================================
 # 日志配置
@@ -94,7 +98,7 @@ CAPTURE_PLANS = {
             ('comment', 0),
             ('share', 0),     # Facebook 使用 share 而不是 repost
             ('post', 0),      # 发帖少一点
-            ('browse', 15),
+            ('browse', 5),
         ]
     },
 
@@ -105,6 +109,53 @@ CAPTURE_PLANS = {
             ('like', 15),
             ('comment', 5),
             ('browse', 35),
+        ]
+    },
+
+    # Twitter完整采集
+    'twitter_full': {
+        'platform': 'twitter',
+        'tasks': [
+            ('like', 5),
+            ('comment', 1),
+            ('retweet', 0),
+            ('post', 0),
+            ('browse', 20),
+        ]
+    },
+
+    # Twitter快速测试
+    'twitter_test': {
+        'platform': 'twitter',
+        'tasks': [
+            ('like', 1),
+            ('comment', 1),
+            ('retweet', 1),
+            ('browse', 1),
+        ]
+    },
+
+    # 知乎完整采集
+    'zhihu_full': {
+        'platform': 'zhihu',
+        'tasks': [
+            ('like', 15),
+            ('comment', 5),
+            ('share', 2),      # 转发到想法
+            ('post', 2),       # 发布想法
+            ('browse', 25),
+        ]
+    },
+
+    # 知乎快速测试
+    'zhihu_test': {
+        'platform': 'zhihu',
+        'tasks': [
+            ('like', 1),
+            ('comment', 1),
+            ('share', 1),
+            ('browse', 1),
+            ('post', 1)
         ]
     },
 }
@@ -446,30 +497,32 @@ class BatchController:
         self.executor = TaskExecutor(self.logger, dry_run)
         self.dry_run = dry_run
 
+        # 初始化SSH控制器（用于VPS操作）
+        self.config = CaptureConfig()
+        self.ssh = SSHController(self.config)
+
         # 开始时间
         self.start_time = time.time()
 
     def cleanup_vps_zombie_processes(self):
-        """清理VPS上的僵尸tcpdump进程"""
+        """清理VPS上的僵尸tcpdump进程（使用SSH自动登录）"""
         try:
-            # 检查是否有僵尸tcpdump进程（增加超时到30秒）
-            result = subprocess.run(
-                ["ssh", "root@216.167.34.54", "ps aux | grep tcpdump | grep -v grep | wc -l"],
-                capture_output=True,
-                text=True,
+            # 连接SSH
+            self.ssh.connect()
+
+            # 检查是否有僵尸tcpdump进程
+            _, stdout, _ = self.ssh.exec_command(
+                "ps aux | grep tcpdump | grep -v grep | wc -l",
                 timeout=30
             )
 
-            zombie_count = int(result.stdout.strip())
+            zombie_count = int(stdout.strip())
             if zombie_count > 0:
                 self.logger.warning(f"⚠️  Found {zombie_count} zombie tcpdump process(es) on VPS")
                 self.logger.info("🧹 Cleaning up zombie processes...")
 
-                # 杀死所有tcpdump进程（增加超时到30秒）
-                subprocess.run(
-                    ["ssh", "root@216.167.34.54", "pkill -9 tcpdump"],
-                    timeout=30
-                )
+                # 杀死所有tcpdump进程
+                self.ssh.exec_command("pkill -9 tcpdump", timeout=30)
 
                 time.sleep(1)
                 self.logger.info("✅ VPS cleanup completed")
@@ -548,6 +601,12 @@ class BatchController:
             self.logger.error(f"❌ Unexpected error: {e}", exc_info=True)
 
         finally:
+            # 断开SSH连接
+            try:
+                self.ssh.disconnect()
+            except Exception as e:
+                self.logger.warning(f"⚠️  SSH disconnect error: {e}")
+
             self._print_summary()
 
     def _print_summary(self):
@@ -590,6 +649,10 @@ def main():
   weibo_test     - 微博测试（4个行为 x 2次）
   facebook_full  - Facebook完整采集
   tiktok_full    - TikTok完整采集
+  twitter_full   - Twitter完整采集（5个行为 x 10次）
+  twitter_test   - Twitter测试（4个行为 x 2次）
+  zhihu_full     - 知乎完整采集（5个行为 x 10次）
+  zhihu_test     - 知乎测试（4个行为 x 2次）
         """
     )
 
@@ -600,7 +663,7 @@ def main():
 
     parser.add_argument(
         '--platform', '-p',
-        choices=['weibo', 'facebook', 'tiktok'],
+        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu'],
         help='平台名称（自定义计划时使用）'
     )
 

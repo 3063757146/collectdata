@@ -173,7 +173,7 @@ def create_driver(use_proxy=False):
 
     if use_proxy:
         # 根据需要修改代理端口
-        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:7897')
+        chrome_options.add_argument('--proxy-server=socks5://127.0.0.1:10818')
         print("🌐 代理已启用")
 
     # 反检测设置

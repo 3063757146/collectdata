@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 清除 Selenium 用户配置文件的缓存脚本
-# 使用方法: ./clear_profile.sh [weibo|facebook|all]
+# 使用方法: ./clear_profile.sh [weibo|facebook|tiktok|zhihu|twitter|all]
 
 set -e
 
@@ -14,6 +14,9 @@ NC='\033[0m' # No Color
 # 配置文件路径
 WEIBO_PROFILE="/Users/shuai/selenium_profiles/weibo"
 FACEBOOK_PROFILE="/Users/shuai/selenium_profiles/facebook"
+TIKTOK_PROFILE="/Users/shuai/selenium_profiles/tiktok"
+ZHIHU_PROFILE="/Users/shuai/selenium_profiles/zhihu"
+TWITTER_PROFILE="/Users/shuai/selenium_profiles/twitter"
 
 # 显示菜单
 show_menu() {
@@ -33,8 +36,11 @@ show_platform_menu() {
     echo "请选择要清理的平台:"
     echo "  1) 微博 (Weibo)"
     echo "  2) Facebook"
-    echo "  3) 全部 (Both)"
-    echo "  4) 返回上级菜单"
+    echo "  3) TikTok"
+    echo "  4) 知乎 (Zhihu)"
+    echo "  5) Twitter"
+    echo "  6) 全部 (All)"
+    echo "  7) 返回上级菜单"
     echo ""
 }
 
@@ -147,11 +153,39 @@ process_platform() {
             ;;
         3)
             if [ "$mode" == "all" ]; then
+                clear_all "$TIKTOK_PROFILE" "TikTok"
+            else
+                clear_cache_only "$TIKTOK_PROFILE" "TikTok"
+            fi
+            ;;
+        4)
+            if [ "$mode" == "all" ]; then
+                clear_all "$ZHIHU_PROFILE" "Zhihu"
+            else
+                clear_cache_only "$ZHIHU_PROFILE" "Zhihu"
+            fi
+            ;;
+        5)
+            if [ "$mode" == "all" ]; then
+                clear_all "$TWITTER_PROFILE" "Twitter"
+            else
+                clear_cache_only "$TWITTER_PROFILE" "Twitter"
+            fi
+            ;;
+        6)
+            # 全部平台
+            if [ "$mode" == "all" ]; then
                 clear_all "$WEIBO_PROFILE" "Weibo"
                 clear_all "$FACEBOOK_PROFILE" "Facebook"
+                clear_all "$TIKTOK_PROFILE" "TikTok"
+                clear_all "$ZHIHU_PROFILE" "Zhihu"
+                clear_all "$TWITTER_PROFILE" "Twitter"
             else
                 clear_cache_only "$WEIBO_PROFILE" "Weibo"
                 clear_cache_only "$FACEBOOK_PROFILE" "Facebook"
+                clear_cache_only "$TIKTOK_PROFILE" "TikTok"
+                clear_cache_only "$ZHIHU_PROFILE" "Zhihu"
+                clear_cache_only "$TWITTER_PROFILE" "Twitter"
             fi
             ;;
     esac
@@ -168,13 +202,25 @@ main() {
             facebook)
                 clear_cache_only "$FACEBOOK_PROFILE" "Facebook"
                 ;;
+            tiktok)
+                clear_cache_only "$TIKTOK_PROFILE" "TikTok"
+                ;;
+            zhihu)
+                clear_cache_only "$ZHIHU_PROFILE" "Zhihu"
+                ;;
+            twitter)
+                clear_cache_only "$TWITTER_PROFILE" "Twitter"
+                ;;
             all)
                 clear_cache_only "$WEIBO_PROFILE" "Weibo"
                 clear_cache_only "$FACEBOOK_PROFILE" "Facebook"
+                clear_cache_only "$TIKTOK_PROFILE" "TikTok"
+                clear_cache_only "$ZHIHU_PROFILE" "Zhihu"
+                clear_cache_only "$TWITTER_PROFILE" "Twitter"
                 ;;
             *)
                 echo -e "${RED}错误: 未知参数 '$1'${NC}"
-                echo "使用方法: $0 [weibo|facebook|all]"
+                echo "使用方法: $0 [weibo|facebook|tiktok|zhihu|twitter|all]"
                 exit 1
                 ;;
         esac
@@ -190,11 +236,11 @@ main() {
             1)
                 echo ""
                 show_platform_menu
-                read -p "请输入选项 (1-4): " platform
+                read -p "请输入选项 (1-7): " platform
 
-                if [ "$platform" == "4" ]; then
+                if [ "$platform" == "7" ]; then
                     continue
-                elif [[ "$platform" =~ ^[1-3]$ ]]; then
+                elif [[ "$platform" =~ ^[1-6]$ ]]; then
                     echo ""
                     process_platform "all" "$platform"
                     echo ""
@@ -207,11 +253,11 @@ main() {
             2)
                 echo ""
                 show_platform_menu
-                read -p "请输入选项 (1-4): " platform
+                read -p "请输入选项 (1-7): " platform
 
-                if [ "$platform" == "4" ]; then
+                if [ "$platform" == "7" ]; then
                     continue
-                elif [[ "$platform" =~ ^[1-3]$ ]]; then
+                elif [[ "$platform" =~ ^[1-6]$ ]]; then
                     echo ""
                     process_platform "cache" "$platform"
                     echo ""

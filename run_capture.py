@@ -360,6 +360,228 @@ def run_tiktok_action(action: str, iteration: int) -> bool:
         return False
 
 
+def run_twitter_action(action: str, iteration: int) -> bool:
+    """
+    运行一次Twitter行为（登录 → 访问 → 执行 → 退出）
+
+    Args:
+        action: 行为类型（like/comment/retweet/post/browse）
+        iteration: 当前迭代次数
+
+    Returns:
+        是否成功
+    """
+    logger.info(f"[Iteration {iteration}] Starting Twitter bot for action: {action}")
+
+    try:
+        import twitter_bot_smart
+
+        driver = twitter_bot_smart.create_driver(use_proxy=True)
+
+        try:
+            driver.get("https://x.com/home")
+            time.sleep(3)
+
+            if not twitter_bot_smart.check_login(driver):
+                logger.info(f"[Iteration {iteration}] Not logged in, waiting for manual login...")
+                twitter_bot_smart.wait_for_login(driver)
+
+            logger.info(f"[Iteration {iteration}] Logged in successfully")
+
+            # 根据action执行行为
+            if action == "like":
+                # 浏览并点赞1次
+                twitter_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_tweets=2,
+                    interaction_rate=0.3,
+                    enable_like=True,
+                    enable_comment=False,
+                    enable_retweet=False,
+                    enable_post=False
+                )
+
+            elif action == "comment":
+                # 浏览并评论1次
+                comment_templates = twitter_bot_smart.get_comment_templates()
+                twitter_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_tweets=2,
+                    interaction_rate=0.3,
+                    enable_like=False,
+                    enable_comment=True,
+                    enable_retweet=False,
+                    enable_post=False,
+                    comment_templates=comment_templates
+                )
+
+            elif action == "retweet":
+                # 浏览并转发1次
+                retweet_templates = twitter_bot_smart.get_retweet_templates()
+                twitter_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_tweets=2,
+                    interaction_rate=0.3,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_retweet=True,
+                    enable_post=False,
+                    retweet_templates=retweet_templates
+                )
+
+            elif action == "post":
+                # 发布一条新推文
+                post_templates = twitter_bot_smart.get_post_templates()
+                twitter_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_tweets=2,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_retweet=False,
+                    enable_post=True,
+                    post_templates=post_templates
+                )
+
+            elif action == "browse":
+                # 纯浏览，不互动
+                twitter_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_tweets=3,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_retweet=False,
+                    enable_post=False
+                )
+
+            else:
+                logger.error(f"Unknown action: {action}")
+                return False
+
+            logger.info(f"[Iteration {iteration}] Action completed successfully")
+            return True
+
+        finally:
+            driver.quit()
+            logger.info(f"[Iteration {iteration}] Browser closed")
+
+    except Exception as e:
+        logger.error(f"[Iteration {iteration}] Error: {e}", exc_info=True)
+        return False
+
+
+def run_zhihu_action(action: str, iteration: int) -> bool:
+    """
+    运行一次知乎行为（登录 → 访问 → 执行 → 退出）
+
+    Args:
+        action: 行为类型（like/comment/share/post/browse）
+        iteration: 当前迭代次数
+
+    Returns:
+        是否成功
+    """
+    logger.info(f"[Iteration {iteration}] Starting Zhihu bot for action: {action}")
+
+    try:
+        import zhihu_bot_smart
+
+        driver = zhihu_bot_smart.create_driver(use_proxy=True)
+
+        try:
+            driver.get("https://www.zhihu.com")
+            time.sleep(3)
+
+            if not zhihu_bot_smart.check_login(driver):
+                logger.info(f"[Iteration {iteration}] Not logged in, waiting for manual login...")
+                zhihu_bot_smart.wait_for_login(driver)
+
+            logger.info(f"[Iteration {iteration}] Logged in successfully")
+
+            # 根据action执行行为
+            if action == "like":
+                # 浏览并点赞1次
+                zhihu_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_items=2,
+                    interaction_rate=0.3,
+                    enable_like=True,
+                    enable_comment=False,
+                    enable_share=False,
+                    enable_post=False
+                )
+
+            elif action == "comment":
+                # 浏览并评论1次
+                comment_templates = zhihu_bot_smart.get_comment_templates()
+                zhihu_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_items=2,
+                    interaction_rate=0.3,
+                    enable_like=False,
+                    enable_comment=True,
+                    enable_share=False,
+                    enable_post=False,
+                    comment_templates=comment_templates
+                )
+
+            elif action == "share":
+                # 浏览并分享1次（转发到想法）
+                share_templates = zhihu_bot_smart.get_share_templates()
+                zhihu_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_items=2,
+                    interaction_rate=0.3,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=True,
+                    enable_post=False,
+                    share_templates=share_templates
+                )
+
+            elif action == "post":
+                # 发布一条新想法
+                post_templates = zhihu_bot_smart.get_post_templates()
+                zhihu_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_items=2,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False,
+                    enable_post=True,
+                    post_templates=post_templates
+                )
+
+            elif action == "browse":
+                # 纯浏览，不互动
+                zhihu_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_items=3,
+                    interaction_rate=0.0,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False,
+                    enable_post=False
+                )
+
+            else:
+                logger.error(f"Unknown action: {action}")
+                return False
+
+            logger.info(f"[Iteration {iteration}] Action completed successfully")
+            return True
+
+        finally:
+            driver.quit()
+            logger.info(f"[Iteration {iteration}] Browser closed")
+
+    except Exception as e:
+        logger.error(f"[Iteration {iteration}] Error: {e}", exc_info=True)
+        return False
+
+
 def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
     """
     顶层接口：执行num次指定平台的指定行为，每次抓包
@@ -405,6 +627,10 @@ def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
         bot_func = run_facebook_action
     elif platform == "tiktok":
         bot_func = run_tiktok_action
+    elif platform == "twitter":
+        bot_func = run_twitter_action
+    elif platform == "zhihu":
+        bot_func = run_zhihu_action
     else:
         logger.error(f"Unknown platform: {platform}")
         return 0
@@ -504,19 +730,21 @@ def main():
   %(prog)s --platform weibo --action post --num 2 --timeout 600
 
 支持的平台:
-  weibo, facebook, tiktok
+  weibo, facebook, tiktok, twitter, zhihu
 
 支持的行为:
   - weibo: like, comment, repost, post, browse
   - facebook: like, comment, share, post, browse
   - tiktok: like, comment, share, browse
+  - twitter: like, comment, retweet, post, browse
+  - zhihu: like, comment, share, post, browse
         """
     )
 
     parser.add_argument(
         '--platform', '-p',
         required=True,
-        choices=['weibo', 'facebook', 'tiktok'],
+        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu'],
         help='平台名称'
     )
 
@@ -547,6 +775,8 @@ def main():
         'weibo': ['like', 'comment', 'repost', 'post', 'browse'],
         'facebook': ['like', 'comment', 'share', 'post', 'browse'],
         'tiktok': ['like', 'comment', 'share', 'browse'],
+        'twitter': ['like', 'comment', 'retweet', 'post', 'browse'],
+        'zhihu': ['like', 'comment', 'share', 'post', 'browse'],
     }
 
     if args.action not in valid_actions[args.platform]:
