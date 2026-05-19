@@ -67,11 +67,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 250),
-            ('comment', 150),
-            ('repost', 50),
-            ('post', 25),      # 发帖少一点
-            ('browse', 500),
+            ('like', 10),
+            ('comment', 3),
+            ('repost', 2),
+            ('post', 2),      # 发帖少一点
+            ('browse', 20),
         ]
     },
 
@@ -90,11 +90,11 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 250),
-            ('comment', 150),
-            ('share', 50),     # Facebook 使用 share 而不是 repost
-            ('post', 25),      # 发帖少一点
-            ('browse', 500),
+            ('like', 1),
+            ('comment', 0),
+            ('share', 0),     # Facebook 使用 share 而不是 repost
+            ('post', 0),      # 发帖少一点
+            ('browse', 15),
         ]
     },
 
@@ -102,9 +102,9 @@ CAPTURE_PLANS = {
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
-            ('like', 100),
-            ('comment', 50),
-            ('browse', 500),
+            ('like', 15),
+            ('comment', 5),
+            ('browse', 35),
         ]
     },
 }
