@@ -10,7 +10,7 @@
 macOS (Selenium Bot)
     │  Xray VLESS 隧道
     ↓  port 33979
-VPS (216.167.34.54)
+VPS (ip)
     │  明文流量
     ↓
 目标网站 (weibo / facebook / tiktok / twitter / zhihu)
@@ -186,11 +186,11 @@ timestamp,packet_size
 ### 网络和 SSH（capture/config.py）
 
 ```python
-vps_ip          = "216.167.34.54"
-mac_private_ip  = "10.67.227.153"
+vps_ip          = "xxx"
+mac_private_ip  = "xx"
 vps_tunnel_port = 33979
 
-ssh_host = "216.167.34.54"
+ssh_host = "xxx"
 ssh_user = "root"
 ```
 
@@ -231,5 +231,5 @@ sudo pkill -9 -f "run_capture"
 sudo pkill -9 tcpdump
 
 # 停止 VPS 端所有 tcpdump
-ssh root@216.167.34.54 "pkill -9 tcpdump"
+ssh root@xx "pkill -9 tcpdump"
 ```
