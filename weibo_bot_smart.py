@@ -626,113 +626,33 @@ def repost_weibo(driver, repost_templates):
 
 # @capture_traffic("weibo", "post")  # 已被 run_capture.py 的会话级抓包替代
 def post_weibo(driver, post_templates):
-    """发布微博"""
+    """发布微博（直接使用页面顶部快捷发帖框）"""
     try:
         print("\n📝 准备发布微博...")
 
-        # 第一步：找到并点击"发微博"按钮
-        print("   查找发微博按钮...")
-
-        # 多种选择器（按优先级）
-        post_button_selectors = [
-            # 通过title属性（最可靠）- 实际是"发微博"
-            "//button[@title='发微博']",
-            "//*[contains(@title, '发微博')]",
-            "//*[contains(@title, '写微博')]",
-
-            # 通过class包含_pub（发布）关键字
-            "//button[contains(@class, '_pub')]",
-
-            # 通过SVG的title标签
-            "//*[.//*[local-name()='svg']/*[local-name()='title' and contains(text(), '写微博')]]",
-
-            # 通过aria-label
-            "//*[contains(@aria-label, '写微博')]",
-            "//*[contains(@aria-label, '发微博')]",
-
-            # 通过文本内容
-            "//button[contains(text(), '写微博')]",
-            "//button[contains(text(), '发微博')]",
-        ]
-
-        post_button = None
-        for selector in post_button_selectors:
-            try:
-                buttons = driver.find_elements(By.XPATH, selector)
-                if buttons:
-                    post_button = buttons[0]
-                    print(f"   ✅ 找到写微博按钮: {selector}")
-                    break
-            except Exception as e:
-                continue
-
-        if not post_button:
-            # 调试模式：打印所有可能相关的按钮
-            print("   ⚠️  未找到写微博按钮，开启调试模式...")
-            print("\n   【调试信息】页面上的所有按钮和链接（包含'写'或'发'字的）：")
-
-            all_clickable = driver.find_elements(By.XPATH, "//button | //a")
-            found_candidates = []
-
-            for elem in all_clickable[:50]:  # 只检查前50个
-                try:
-                    text = elem.text.strip()
-                    title = elem.get_attribute('title') or ''
-                    aria_label = elem.get_attribute('aria-label') or ''
-                    class_name = elem.get_attribute('class') or ''
-
-                    if '写' in text or '发' in text or '写' in title or '发' in title:
-                        info = f"文本: {text[:20]} | title: {title[:30]} | aria: {aria_label[:30]}"
-                        print(f"   - {info}")
-                        found_candidates.append(elem)
-                except:
-                    pass
-
-            if found_candidates:
-                print(f"\n   找到 {len(found_candidates)} 个可能的候选按钮，尝试点击第一个...")
-                post_button = found_candidates[0]
-            else:
-                print("   ❌ 未找到任何相关按钮")
-                return False
-
-        # 点击打开发帖框
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", post_button)
-        time.sleep(0.5)
-        driver.execute_script("arguments[0].click();", post_button)
-        print("   ✅ 点击写微博按钮，等待输入框...")
-        time.sleep(3)
-
-        # 第二步：查找发帖输入框
-        print("   查找输入框...")
-        textarea_selectors = [
-            # 实际的placeholder文本
+        # 直接找快捷发帖框（首页顶部，始终存在，无需点击写微博按钮）
+        textarea = None
+        for selector in [
             'textarea[placeholder*="有什么新鲜事想分享给大家"]',
             'textarea[placeholder*="有什么新鲜事"]',
-            'textarea[placeholder*="分享"]',
-            # 通过class
             'textarea[class*="_input"]',
-            'textarea[class*="input"]',
-            # 通用选择器
-            'div[contenteditable="true"]',
             'textarea',
-        ]
-
-        textarea = None
-        for selector in textarea_selectors:
+        ]:
             try:
-                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                elements = [e for e in driver.find_elements(By.CSS_SELECTOR, selector) if e.is_displayed()]
                 if elements:
                     textarea = elements[0]
-                    print(f"   ✅ 找到输入框: {selector}")
+                    print(f"   ✅ 找到快捷发帖框: {selector}")
                     break
             except:
                 continue
 
         if not textarea:
             print("   ❌ 未找到输入框")
+            logging.warning("发帖失败：未找到快捷发帖框")
             return False
 
-        # 第三步：输入内容
+        # 输入内容
         content = random.choice(post_templates)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", textarea)
         time.sleep(0.5)
@@ -742,74 +662,23 @@ def post_weibo(driver, post_templates):
         print(f"   ✅ 已输入内容: {content}")
         time.sleep(2)
 
-        # 第四步：查找并点击发布按钮
-        print("   查找发布按钮...")
-        time.sleep(2)  # 等待按钮状态更新（输入内容后才可点击）
-
-        publish_button_selectors = [
-            # 包含"发布"文字的按钮
-            "//button[contains(., '发布')]",
-            "//button[contains(text(), '发布')]",
-            "//span[contains(text(), '发布')]/parent::button",
-
-            # 包含"发送"文字的按钮
-            "//button[contains(., '发送')]",
-
-            # 通过class（woo-button开头的主按钮）
-            "//button[contains(@class, 'woo-button-primary')]",
-            "//button[contains(@class, 'woo-button-main')]",
-
-            # submit类型的按钮
-            "//button[@type='submit']",
-        ]
-
+        # 查找并点击发布按钮（输入内容后按钮才激活）
         publish_button = None
-        for selector in publish_button_selectors:
-            try:
-                buttons = driver.find_elements(By.XPATH, selector)
+        for btn in driver.find_elements(By.XPATH, "//button[contains(., '发布') or contains(., '发送')]"):
+            if btn.is_displayed() and ('发布' in btn.text or '发送' in btn.text):
+                publish_button = btn
+                break
 
-                for btn in buttons:
-                    btn_text = btn.text.strip()
-                    if '发布' in btn_text or '发送' in btn_text:
-                        publish_button = btn
-                        print(f"   ✅ 找到发布按钮: {btn_text}")
-                        break
-                if publish_button:
-                    break
-            except:
-                continue
+        if not publish_button:
+            print("   ❌ 未找到发布按钮")
+            logging.warning("发帖失败：未找到发布按钮")
+            return False
 
-        if publish_button:
-            # 检查按钮是否可点击
-            is_disabled = publish_button.get_attribute('disabled')
-            if is_disabled:
-                print("   ⚠️  按钮是禁用状态，等待1秒...")
-                time.sleep(1)
-
-            # 点击发布
-            driver.execute_script("arguments[0].click();", publish_button)
-            print(f"   ✅ 发布成功！")
-            logging.info(f"发布微博成功: {content}")
-            time.sleep(3)
-            return True
-        else:
-            print("   ⚠️  未找到发布按钮，显示调试信息...")
-            logging.warning("发布失败：未找到发布按钮")
-            # 打印所有按钮
-            all_buttons = driver.find_elements(By.TAG_NAME, 'button')
-            print(f"\n   当前弹窗中的所有按钮（前10个）：")
-            for i, btn in enumerate(all_buttons[:10], 1):
-                try:
-                    text = btn.text.strip()[:30]
-                    class_name = btn.get_attribute('class')[:50]
-                    print(f"   {i}. 文本: '{text}' | class: {class_name}")
-                except:
-                    pass
-
-            print("\n   请手动点击发布按钮...")
-            input("   手动点击后按回车继续...")
-            logging.info("手动发布微博完成")
-            return True
+        driver.execute_script("arguments[0].click();", publish_button)
+        print(f"   ✅ 发布成功！")
+        logging.info(f"发布微博成功: {content}")
+        time.sleep(3)
+        return True
 
     except Exception as e:
         print(f"   ❌ 发帖失败: {e}")

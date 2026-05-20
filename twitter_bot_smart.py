@@ -783,6 +783,7 @@ def smart_browse_and_interact(
         - 如果 enable_post=True，确保至少成功发推文1次
         - 最多尝试 max_tweets*3 条推文（避免无限循环）
     """
+    
     print("\n🤖 开始智能浏览模式（确保模式）...")
     print(f"   - 默认浏览 {max_tweets} 条推文")
     print(f"   - 点赞: {'启用（确保≥1次）' if enable_like else '禁用'}")

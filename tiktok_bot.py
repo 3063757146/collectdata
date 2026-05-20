@@ -239,202 +239,61 @@ def simulate_reading(min_sec=3, max_sec=8):
     time.sleep(reading_time)
 
 def like_video(driver):
-    """点赞视频（增强版，支持多种选择器和状态验证）"""
-    try:
-        # TikTok 点赞图标选择器（按优先级）
-        # 关键发现：点赞按钮是 span[data-e2e="like-icon"]，需要点击其父元素
-        like_selectors = [
-            # 方法1: 通过 data-e2e="like-icon" 找到图标，点击父元素（最可靠）
-            ('XPATH', '//span[@data-e2e="like-icon"]/parent::*'),
+    """点赞视频"""
+    import re
 
-            # 方法2: 直接查找 data-e2e="like-icon"
-            ('CSS', 'span[data-e2e="like-icon"]'),
-
-            # 方法3: 通过 data-e2e 属性查找按钮
-            ('CSS', 'button[data-e2e="like-button"]'),
-            ('CSS', 'button[data-e2e="browse-like"]'),
-
-            # 方法4: 通过 aria-label
-            ('CSS', 'button[aria-label*="like"]'),
-            ('CSS', 'button[aria-label*="Like"]'),
-
-            # 方法5: 通过包含心形 SVG 的元素
-            ('XPATH', '//*[@data-e2e="like-icon"]/parent::button'),
-            ('XPATH', '//*[@data-e2e="like-icon"]/parent::div'),
-        ]
-
-        print(f"      🔍 查找点赞按钮...")
-
-        for method, selector in like_selectors:
-            try:
-                if method == 'CSS':
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                else:
-                    elements = driver.find_elements(By.XPATH, selector)
-
-                if elements:
-                    print(f"      ✓ 找到 {len(elements)} 个候选元素（选择器: {selector[:50]}...）")
-
-                    for elem in elements:
-                        try:
-                            # 检查元素是否可见
-                            if not elem.is_displayed():
-                                continue
-
-                            # 查找图标元素（用于检查状态）
-                            like_icon = None
-                            try:
-                                # 如果当前元素就是 span[data-e2e="like-icon"]
-                                if elem.get_attribute('data-e2e') == 'like-icon':
-                                    like_icon = elem
-                                else:
-                                    # 否则在子元素中查找
-                                    like_icon = elem.find_element(By.CSS_SELECTOR, 'span[data-e2e="like-icon"]')
-                            except:
-                                # 如果找不到图标，跳过这个元素
-                                continue
-
-                            if not like_icon:
-                                continue
-
-                            # 记录点击前的状态（检查图标的颜色）
-                            style_before = like_icon.get_attribute('style') or ''
-
-                            # 提取颜色值
-                            import re
-                            color_before = None
-                            color_match = re.search(r'color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)', style_before)
-                            if color_match:
-                                r, g, b = int(color_match.group(1)), int(color_match.group(2)), int(color_match.group(3))
-                                color_before = (r, g, b)
-                                print(f"      💡 点击前颜色: rgb({r}, {g}, {b})")
-
-                                # 检查是否已经点赞（红色系）
-                                # 已点赞颜色通常是 rgb(254, 44, 85) 或类似的红色
-                                if r > 200 and g < 100 and b < 150:
-                                    print("      ⚠️  似乎已经点赞过了（图标是红色），跳过")
-                                    logging.info("点赞跳过：已点赞（颜色检测）")
-                                    return True
-
-                            # 滚动到元素位置
-                            driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", elem)
-                            time.sleep(random.uniform(0.5, 1.0))
-
-                            # 确定要点击的元素
-                            # 如果当前元素是 span，点击父元素；如果是 button/div，直接点击
-                            click_target = elem
-                            if elem.tag_name == 'span':
-                                try:
-                                    # 获取父元素
-                                    click_target = elem.find_element(By.XPATH, '..')
-                                    print(f"      💡 点击父元素: {click_target.tag_name}")
-                                except:
-                                    pass
-
-                            # 尝试点击
-                            try:
-                                # 优先使用 JavaScript 点击
-                                driver.execute_script("arguments[0].click();", click_target)
-                            except:
-                                try:
-                                    # 备用方案：原生点击
-                                    click_target.click()
-                                except:
-                                    # 备用方案2：ActionChains
-                                    ActionChains(driver).move_to_element(click_target).click().perform()
-
-                            # 等待状态更新（增加等待时间以确保动画完成）
-                            time.sleep(2.5)
-
-                            # 验证是否点赞成功（多种方法）
-                            try:
-                                success = False
-
-                                # 方法1: 检查按钮的 class 变化（最可靠）
-                                try:
-                                    parent_class_after = click_target.get_attribute('class') or ''
-
-                                    # 检查是否包含 "liked" 或 "active" 等状态 class
-                                    if any(x in parent_class_after.lower() for x in ['liked', 'active', 'checked']):
-                                        print("      ✅ 点赞成功（检测到 liked/active class）")
-                                        logging.info("点赞成功（class 变化）")
-                                        success = True
-                                except:
-                                    pass
-
-                                # 方法2: 检查 aria-pressed 属性
-                                if not success:
-                                    try:
-                                        aria_pressed = click_target.get_attribute('aria-pressed')
-                                        if aria_pressed == 'true':
-                                            print("      ✅ 点赞成功（aria-pressed=true）")
-                                            logging.info("点赞成功（aria 属性）")
-                                            success = True
-                                    except:
-                                        pass
-
-                                # 方法3: 检查 SVG fill 颜色变化
-                                if not success:
-                                    try:
-                                        svg_elements = like_icon.find_elements(By.TAG_NAME, 'svg')
-                                        if svg_elements:
-                                            svg_fill = svg_elements[0].get_attribute('fill')
-                                            if svg_fill and 'rgb(254' in svg_fill:  # 红色
-                                                print("      ✅ 点赞成功（SVG fill 变红）")
-                                                logging.info("点赞成功（SVG fill）")
-                                                success = True
-                                    except:
-                                        pass
-
-                                # 方法4: 检查 style 颜色（原有逻辑，作为备用）
-                                if not success:
-                                    try:
-                                        style_after = like_icon.get_attribute('style') or ''
-                                        color_after = None
-                                        color_match = re.search(r'color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)', style_after)
-                                        if color_match:
-                                            r, g, b = int(color_match.group(1)), int(color_match.group(2)), int(color_match.group(3))
-                                            color_after = (r, g, b)
-                                            print(f"      💡 点击后颜色: rgb({r}, {g}, {b})")
-
-                                            # 检查是否变成红色
-                                            if r > 200 and g < 100 and b < 150:
-                                                print("      ✅ 点赞成功（颜色变红）")
-                                                logging.info(f"点赞成功（颜色）: {color_before} -> {color_after}")
-                                                success = True
-                                    except:
-                                        pass
-
-                                # 如果以上任一方法检测到成功，返回 True
-                                if success:
-                                    return True
-                                else:
-                                    # 所有方法都未检测到变化
-                                    # 但如果点击没报错，可能只是检测方法不对，直接认为成功
-                                    print("      ✅ 点赞操作已执行（无法验证状态变化，假定成功）")
-                                    logging.info("点赞已执行（假定成功）")
-                                    return True
-
-                            except Exception as verify_err:
-                                # 如果无法验证，假定成功
-                                print(f"      ⚠️  状态验证异常: {verify_err}")
-                                print("      ✅ 点赞操作已执行（验证异常，假定成功）")
-                                logging.info("点赞已执行（验证异常）")
-                                return True
-
-                        except Exception as e:
-                            print(f"      ⚠️  点击失败，尝试下一个: {str(e)[:50]}")
-                            continue
-            except Exception as e:
-                continue
-
-        # 如果所有方法都失败
-        print("      ❌ 未找到可用的点赞按钮")
-        logging.warning("点赞失败：未找到点赞按钮")
+    def _is_liked(icon_elem):
+        try:
+            style = icon_elem.get_attribute('style') or ''
+            m = re.search(r'color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)', style)
+            if m:
+                r, g, b = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                return r > 200 and g < 100 and b < 150
+        except:
+            pass
         return False
 
+    try:
+        print("      🔍 查找点赞按钮...")
+
+        # 只取第一个可见的点赞图标，避免找到多个导致重复点击
+        elements = driver.find_elements(By.CSS_SELECTOR, 'span[data-e2e="like-icon"]')
+        visible = [e for e in elements if e.is_displayed()]
+        if not visible:
+            print("      ❌ 未找到点赞按钮")
+            logging.warning("点赞失败：未找到点赞按钮")
+            return False
+
+        like_icon = visible[0]
+
+        # 已点赞则跳过（防止重复执行时取消点赞）
+        if _is_liked(like_icon):
+            print("      ⚠️  已经点赞，跳过")
+            logging.info("点赞跳过：已点赞")
+            return True
+
+        # 点击父按钮（span 本身不可点击）
+        click_target = like_icon.find_element(By.XPATH, '..')
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", click_target)
+        time.sleep(random.uniform(0.3, 0.8))
+
+        # 只点击一次，不使用 fallback（多次点击会导致取消点赞）
+        driver.execute_script("arguments[0].click();", click_target)
+        print("      ✅ 点赞按钮已点击")
+
+        time.sleep(1.5)
+
+        if _is_liked(like_icon):
+            print("      ✅ 点赞成功（颜色确认）")
+            logging.info("点赞成功（颜色确认）")
+        else:
+            print("      ✅ 点赞已操作（假定成功）")
+            logging.info("点赞已操作")
+
+        return True
+
     except Exception as e:
-        print(f"      ❌ 点赞异常: {e}")
+        print(f"      ❌ 点赞失败: {e}")
         logging.error(f"点赞异常: {e}")
         import traceback
         traceback.print_exc()
@@ -796,6 +655,8 @@ def smart_browse_and_interact(
     enable_comment=True,
     comment_templates=None
 ):
+   
+
     """
     智能浏览和互动 - 确保模式
 

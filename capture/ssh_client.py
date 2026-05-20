@@ -162,7 +162,7 @@ class SSHController:
         timeout: int = 30
     ) -> Tuple[int, str, str]:
         """
-        执行SSH命令
+        执行SSH命令，连接断开时自动重连重试一次
 
         Args:
             cmd: 要执行的命令
@@ -174,28 +174,46 @@ class SSHController:
         Raises:
             SSHCommandError: 命令执行失败
         """
-        self.ensure_connected()
+        _CONNECTION_ERRORS = ('timeout', 'eof', 'channel', 'transport', 'socket', 'reset')
 
-        try:
-            self._logger.debug(f"Executing command: {cmd}")
+        for attempt in range(2):  # 最多尝试2次：原始连接 + 重连后重试
+            self.ensure_connected()
+            try:
+                self._logger.debug(f"Executing command: {cmd}")
+                stdin, stdout, stderr = self._client.exec_command(cmd, timeout=timeout)
 
-            stdin, stdout, stderr = self._client.exec_command(cmd, timeout=timeout)
+                exit_code = stdout.channel.recv_exit_status()
+                stdout_str = stdout.read().decode('utf-8', errors='ignore')
+                stderr_str = stderr.read().decode('utf-8', errors='ignore')
 
-            # 等待命令完成
-            exit_code = stdout.channel.recv_exit_status()
-            stdout_str = stdout.read().decode('utf-8', errors='ignore')
-            stderr_str = stderr.read().decode('utf-8', errors='ignore')
+                if exit_code != 0:
+                    self._logger.warning(
+                        f"Command failed (exit code {exit_code}): {cmd}\n"
+                        f"stderr: {stderr_str}"
+                    )
 
-            if exit_code != 0:
-                self._logger.warning(
-                    f"Command failed (exit code {exit_code}): {cmd}\n"
-                    f"stderr: {stderr_str}"
-                )
+                return exit_code, stdout_str, stderr_str
 
-            return exit_code, stdout_str, stderr_str
+            except Exception as e:
+                err_lower = str(e).lower()
+                is_conn_err = any(kw in err_lower for kw in _CONNECTION_ERRORS)
 
-        except Exception as e:
-            raise SSHCommandError(f"Command execution failed: {cmd}\nError: {e}")
+                if is_conn_err and attempt == 0:
+                    self._logger.warning(
+                        f"SSH connection lost during command, reconnecting and retrying... "
+                        f"({e})"
+                    )
+                    self._connected = False
+                    try:
+                        self.connect()
+                    except Exception as conn_e:
+                        raise SSHCommandError(
+                            f"Command execution failed: {cmd}\n"
+                            f"Reconnect failed: {conn_e}"
+                        )
+                    continue  # 重试
+
+                raise SSHCommandError(f"Command execution failed: {cmd}\nError: {e}")
 
     def exec_command_background(self, cmd: str) -> paramiko.Channel:
         """
@@ -236,25 +254,26 @@ class SSHController:
         self.ensure_connected()
 
         try:
-            # 确保SFTP会话
-            if not self._sftp:
-                self._sftp = self._client.open_sftp()
-
             self._logger.info(f"Downloading {remote_path} -> {local_path}")
 
-            # 下载文件（带重试）
-            max_retries = 2
-            for attempt in range(max_retries):
+            for attempt in range(2):  # 最多尝试2次：原始连接 + 重连后重试
                 try:
+                    # 每次尝试都重新打开 SFTP（连接重建后旧 sftp 已失效）
+                    if not self._sftp:
+                        self._sftp = self._client.open_sftp()
                     self._sftp.get(remote_path, local_path)
                     self._logger.info(f"Download successful: {local_path}")
                     return
                 except Exception as e:
-                    if attempt < max_retries - 1:
-                        self._logger.warning(f"Download attempt {attempt + 1} failed: {e}, retrying...")
-                        time.sleep(1)
-                    else:
-                        raise
+                    if attempt == 0:
+                        self._logger.warning(
+                            f"Download failed, reconnecting and retrying... ({e})"
+                        )
+                        self._connected = False
+                        self._sftp = None
+                        self.connect()
+                        continue
+                    raise
 
         except Exception as e:
             raise FileTransferError(

@@ -23,6 +23,7 @@ import time
 import logging
 import argparse
 import random
+from selenium.webdriver.common.by import By
 from capture import CaptureManager, CaptureConfig
 from capture.label import generate_label
 
@@ -371,8 +372,10 @@ def run_twitter_action(action: str, iteration: int) -> bool:
     Returns:
         是否成功
     """
-    logger.info(f"[Iteration {iteration}] Starting Twitter bot for action: {action}")
 
+    logger.info(f"[Iteration {iteration}] Starting Twitter bot for action: {action}")
+    # print("******************------------休眠10分钟传数据 --------")
+    # time.sleep(600)
     try:
         import twitter_bot_smart
 
@@ -582,6 +585,99 @@ def run_zhihu_action(action: str, iteration: int) -> bool:
         return False
 
 
+def run_instagram_action(action: str, iteration: int) -> bool:
+    """
+    运行一次Instagram行为（登录 → 访问 → 执行 → 退出）
+
+    Args:
+        action: 行为类型（like/comment/share/browse）
+        iteration: 当前迭代次数
+
+    Returns:
+        是否成功
+    """
+    logger.info(f"[Iteration {iteration}] Starting Instagram bot for action: {action}")
+
+    try:
+        import instagram_bot_smart
+
+        driver = instagram_bot_smart.create_driver(use_proxy=True)
+
+        try:
+            driver.get("https://www.instagram.com/")
+            time.sleep(4)
+
+            # 关闭可能出现的通知弹窗
+            try:
+                not_now = driver.find_element(
+                    By.XPATH,
+                    "//button[contains(text(), '以后再说') or contains(text(), 'Not Now') or contains(text(), 'Not now')]"
+                )
+                not_now.click()
+                time.sleep(1)
+            except Exception:
+                pass
+
+            if not instagram_bot_smart.check_login(driver):
+                logger.info(f"[Iteration {iteration}] Not logged in, waiting for manual login...")
+                instagram_bot_smart.wait_for_login(driver)
+
+            logger.info(f"[Iteration {iteration}] Logged in successfully")
+
+            if action == "like":
+                instagram_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_posts=2,
+                    enable_like=True,
+                    enable_comment=False,
+                    enable_share=False,
+                )
+
+            elif action == "comment":
+                comment_templates = instagram_bot_smart.get_comment_templates()
+                instagram_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_posts=2,
+                    enable_like=False,
+                    enable_comment=True,
+                    enable_share=False,
+                    comment_templates=comment_templates,
+                )
+
+            elif action == "share":
+                instagram_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_posts=2,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=True,
+                )
+
+            elif action == "browse":
+                instagram_bot_smart.smart_browse_and_interact(
+                    driver,
+                    max_posts=3,
+                    enable_like=False,
+                    enable_comment=False,
+                    enable_share=False,
+                )
+
+            else:
+                logger.error(f"Unknown action: {action}")
+                return False
+
+            logger.info(f"[Iteration {iteration}] Action completed successfully")
+            return True
+
+        finally:
+            driver.quit()
+            logger.info(f"[Iteration {iteration}] Browser closed")
+
+    except Exception as e:
+        logger.error(f"[Iteration {iteration}] Error: {e}", exc_info=True)
+        return False
+
+
 def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
     """
     顶层接口：执行num次指定平台的指定行为，每次抓包
@@ -631,6 +727,8 @@ def run(platform: str, action: str, num: int, timeout: int = 300) -> int:
         bot_func = run_twitter_action
     elif platform == "zhihu":
         bot_func = run_zhihu_action
+    elif platform == "instagram":
+        bot_func = run_instagram_action
     else:
         logger.error(f"Unknown platform: {platform}")
         return 0
@@ -730,7 +828,7 @@ def main():
   %(prog)s --platform weibo --action post --num 2 --timeout 600
 
 支持的平台:
-  weibo, facebook, tiktok, twitter, zhihu
+  weibo, facebook, tiktok, twitter, zhihu, instagram
 
 支持的行为:
   - weibo: like, comment, repost, post, browse
@@ -738,13 +836,14 @@ def main():
   - tiktok: like, comment, share, browse
   - twitter: like, comment, retweet, post, browse
   - zhihu: like, comment, share, post, browse
+  - instagram: like, comment, share, browse
         """
     )
 
     parser.add_argument(
         '--platform', '-p',
         required=True,
-        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu'],
+        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu', 'instagram'],
         help='平台名称'
     )
 
@@ -777,6 +876,7 @@ def main():
         'tiktok': ['like', 'comment', 'share', 'browse'],
         'twitter': ['like', 'comment', 'retweet', 'post', 'browse'],
         'zhihu': ['like', 'comment', 'share', 'post', 'browse'],
+        'instagram': ['like', 'comment', 'share', 'browse'],
     }
 
     if args.action not in valid_actions[args.platform]:

@@ -116,52 +116,33 @@ def simulate_reading(min_sec=3, max_sec=8):
     time.sleep(reading_time)
 
 def check_login(driver):
-    """检查是否已登录"""
+    """检查是否已登录 - 通过导航栏头像图片判断"""
     try:
         print("🔍 检测登录状态...")
         time.sleep(2)
 
-        # 方法1: 查找登录按钮（如果存在则未登录）
-        login_selectors = [
-            "//a[contains(text(), '登录')]",
-            "//a[contains(text(), '登錄')]",
-            "//a[contains(text(), 'Log In')]",
-            "//button[contains(text(), '登录')]",
-            "//button[contains(text(), 'Log In')]",
-        ]
+        # 主要判断：导航栏存在 fbcdn.net 头像图片 = 已登录
+        try:
+            avatar_imgs = driver.find_elements(By.CSS_SELECTOR, 'img[src*="fbcdn.net"]')
+            visible_avatars = [img for img in avatar_imgs if img.is_displayed()]
+            if visible_avatars:
+                print(f"   ✅ 检测到头像图片（{len(visible_avatars)} 个）-> 已登录")
+                return True
+        except:
+            pass
 
-        for selector in login_selectors:
-            try:
-                elements = driver.find_elements(By.XPATH, selector)
-                for elem in elements:
-                    if elem.is_displayed():
-                        print(f"   ❌ 找到登录按钮 -> 未登录")
-                        return False
-            except:
-                continue
-
-        # 方法2: 查找已登录标志
-        logged_in_selectors = [
-            ('XPATH', "//div[@aria-label='你的个人主页']", '个人主页'),
-            ('XPATH', "//div[@aria-label='Your profile']", 'Your profile'),
-            ('XPATH', "//a[@aria-label='首页']", '首页链接'),
-            ('XPATH', "//a[@aria-label='Home']", 'Home link'),
-            ('CSS', 'img[data-visualcompletion="media-vc-image"]', '头像图片'),
-        ]
-
-        for method, selector, desc in logged_in_selectors:
-            try:
-                if method == 'XPATH':
-                    elements = driver.find_elements(By.XPATH, selector)
-                else:
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
-
-                visible_elements = [e for e in elements if e.is_displayed()]
-                if visible_elements:
-                    print(f"   ✅ 找到已登录标志：{desc} -> 已登录")
-                    return True
-            except:
-                continue
+        # 备用：查找未登录标志（登录按钮）
+        try:
+            login_elements = driver.find_elements(By.XPATH,
+                "//a[contains(text(), 'Log In') or contains(text(), '登录') or contains(text(), '登錄')]"
+                " | //button[contains(text(), 'Log In') or contains(text(), '登录')]"
+            )
+            visible_logins = [e for e in login_elements if e.is_displayed()]
+            if visible_logins:
+                print("   ❌ 找到登录按钮 -> 未登录")
+                return False
+        except:
+            pass
 
         print("   ⚠️  无法确定登录状态，假定未登录")
         return False

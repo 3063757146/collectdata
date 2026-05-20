@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}  批量抓包循环脚本${NC}"
-echo -e "${YELLOW}  Facebook → 知乎 → Twitter → TikTok → 微博${NC}"
+echo -e "${YELLOW}  Instagram → Facebook → 知乎 → Twitter → TikTok → 微博${NC}"
 echo -e "${YELLOW}  按 Ctrl+C 停止${NC}"
 echo -e "${YELLOW}======================================${NC}"
 echo ""
@@ -45,25 +45,39 @@ trap cleanup SIGINT SIGTERM
 # 无限循环
 while true; do
     # # 打印当前轮次
-    # echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    # echo -e "${BLUE}第 ${iteration} 轮${NC}"
-    # echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}第 ${iteration} 轮${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-    # # 1. 执行 Facebook
-    # echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Facebook 批量抓包${NC}"
-    # sudo python3 batch_capture.py --config facebook_full
-    # facebook_exit_code=$?
+    # 1. 执行 Instagram
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
+    sudo python3 batch_capture.py --config instagram_full
+    instagram_exit_code=$?
 
-    # if [ $facebook_exit_code -ne 0 ]; then
-    #     echo -e "${YELLOW}⚠️  Facebook 批量抓包异常退出 (exit code: $facebook_exit_code)${NC}"
-    # else
-    #     echo -e "${GREEN}✅ Facebook 批量抓包完成${NC}"
-    # fi
+    if [ $instagram_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  Instagram 批量抓包异常退出 (exit code: $instagram_exit_code)${NC}"
+    else
+        echo -e "${GREEN}✅ Instagram 批量抓包完成${NC}"
+    fi
 
-    # echo ""
-    # sleep 3  # 间隔3秒
+    echo ""
+    sleep 3  # 间隔3秒
 
-    # 2. 执行 知乎
+    # 2. 执行 Facebook
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Facebook 批量抓包${NC}"
+    sudo python3 batch_capture.py --config facebook_full
+    facebook_exit_code=$?
+
+    if [ $facebook_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  Facebook 批量抓包异常退出 (exit code: $facebook_exit_code)${NC}"
+    else
+        echo -e "${GREEN}✅ Facebook 批量抓包完成${NC}"
+    fi
+
+    echo ""
+    sleep 3  # 间隔3秒
+
+    # 3. 执行 知乎
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
     sudo python3 batch_capture.py --config zhihu_full
     zhihu_exit_code=$?
@@ -77,7 +91,7 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
-    # 3. 执行 Twitter
+    # 4. 执行 Twitter
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Twitter 批量抓包${NC}"
     sudo python3 batch_capture.py --config twitter_full
     twitter_exit_code=$?
@@ -91,7 +105,7 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
-    # 4. 执行 TikTok
+    # 5. 执行 TikTok
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: TikTok 批量抓包${NC}"
     sudo python3 batch_capture.py --config tiktok_full
     tiktok_exit_code=$?
@@ -105,7 +119,7 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
-    # 5. 执行 Weibo
+    # 6. 执行 Weibo
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Weibo 批量抓包${NC}"
     sudo python3 batch_capture.py --config weibo_full
     weibo_exit_code=$?
@@ -117,7 +131,7 @@ while true; do
     fi
 
     echo ""
-    echo -e "${BLUE}第 ${iteration} 轮完成 (Facebook → 知乎 → Twitter → TikTok → 微博)${NC}"
+    echo -e "${BLUE}第 ${iteration} 轮完成 (Instagram → Facebook → 知乎 → Twitter → TikTok → 微博)${NC}"
     echo ""
 
     # 增加计数器

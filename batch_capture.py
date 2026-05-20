@@ -71,11 +71,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 10),
+            ('like', 5),
             ('comment', 3),
             ('repost', 2),
             ('post', 2),      # 发帖少一点
-            ('browse', 20),
+            ('browse', 10),
         ]
     },
 
@@ -90,6 +90,28 @@ CAPTURE_PLANS = {
         ]
     },
 
+    # Instagram完整采集
+    'instagram_full': {
+        'platform': 'instagram',
+        'tasks': [
+            ('like', 10),
+            ('comment', 2),
+            ('share', 0),
+            ('browse', 25),
+        ]
+    },
+
+    # Instagram快速测试
+    'instagram_test': {
+        'platform': 'instagram',
+        'tasks': [
+            ('like', 1),
+            ('comment', 1),
+            ('share', 1),
+            ('browse', 1),
+        ]
+    },
+
     # Facebook完整采集
     'facebook_full': {
         'platform': 'facebook',
@@ -98,7 +120,7 @@ CAPTURE_PLANS = {
             ('comment', 0),
             ('share', 0),     # Facebook 使用 share 而不是 repost
             ('post', 0),      # 发帖少一点
-            ('browse', 5),
+            ('browse', 15),
         ]
     },
 
@@ -176,7 +198,7 @@ class TimingConfig:
     DIFF_ACTION_MAX_INTERVAL = 40  # 5分钟
 
     # 休息时段（每采集N次后休息一段时间）
-    REST_AFTER_TASKS = 20           # 每10次任务后休息
+    REST_AFTER_TASKS = 20           # 每20次任务后休息
     REST_MIN_DURATION = 180        # 休息30分钟
     REST_MAX_DURATION = 300        # 休息1小时
 
@@ -505,29 +527,34 @@ class BatchController:
         self.start_time = time.time()
 
     def cleanup_vps_zombie_processes(self):
-        """清理VPS上的僵尸tcpdump进程（使用SSH自动登录）"""
+        """清理VPS上的僵尸tcpdump进程，并删除它们正在写的pcap文件"""
         try:
-            # 连接SSH
             self.ssh.connect()
 
-            # 检查是否有僵尸tcpdump进程
+            # 获取僵尸进程正在写的文件列表（提取 -w 后面的参数）
             _, stdout, _ = self.ssh.exec_command(
-                "ps aux | grep tcpdump | grep -v grep | wc -l",
+                "ps aux | grep tcpdump | grep -v grep | awk '{for(i=1;i<=NF;i++) if($i==\"-w\") print $(i+1)}'",
                 timeout=30
             )
+            zombie_files = [f.strip() for f in stdout.strip().splitlines() if f.strip()]
 
-            zombie_count = int(stdout.strip())
-            if zombie_count > 0:
-                self.logger.warning(f"⚠️  Found {zombie_count} zombie tcpdump process(es) on VPS")
-                self.logger.info("🧹 Cleaning up zombie processes...")
-
-                # 杀死所有tcpdump进程
-                self.ssh.exec_command("pkill -9 tcpdump", timeout=30)
-
-                time.sleep(1)
-                self.logger.info("✅ VPS cleanup completed")
-            else:
+            if not zombie_files:
                 self.logger.info("✅ No zombie processes on VPS")
+                return
+
+            self.logger.warning(f"⚠️  Found {len(zombie_files)} zombie tcpdump process(es) on VPS")
+
+            # 先 kill 所有 tcpdump
+            self.logger.info("🧹 Killing zombie processes...")
+            self.ssh.exec_command("pkill -9 tcpdump", timeout=30)
+            time.sleep(1)
+
+            # 再删除这些僵尸进程写的 pcap 文件
+            for fpath in zombie_files:
+                self.logger.info(f"🗑️  Removing zombie pcap: {fpath}")
+                self.ssh.exec_command(f"rm -f {fpath}", timeout=30)
+
+            self.logger.info(f"✅ VPS cleanup completed: killed {len(zombie_files)} process(es), removed {len(zombie_files)} zombie pcap(s)")
 
         except Exception as e:
             self.logger.warning(f"⚠️  VPS cleanup failed (non-critical): {e}")
@@ -559,11 +586,23 @@ class BatchController:
 
                 # 计算等待时间
                 if self.scheduler.completed_tasks > 0:
+                    is_rest_period = (
+                        self.scheduler.completed_tasks % TimingConfig.REST_AFTER_TASKS == 0
+                    )
                     wait_time = self.scheduler.calculate_wait_time(action)
                     self.logger.info(f"⏳ Waiting {wait_time}s before next task...")
 
                     if not self.dry_run:
-                        time.sleep(wait_time)
+                        if is_rest_period:
+                            # 先等5秒让上次 capture 完全收尾，再清理 VPS 僵尸进程
+                            time.sleep(5)
+                            self.logger.info("🧹 Rest period: killing any leftover VPS tcpdump...")
+                            self.cleanup_vps_zombie_processes()
+                            remaining = wait_time - 5
+                            if remaining > 0:
+                                time.sleep(remaining)
+                        else:
+                            time.sleep(wait_time)
 
                 # 执行任务（带重试）
                 success = False
@@ -645,14 +684,16 @@ def main():
   %(prog)s --config weibo_full --dry-run
 
 可用的预定义计划:
-  weibo_full     - 微博完整采集（5个行为 x 10次）
-  weibo_test     - 微博测试（4个行为 x 2次）
-  facebook_full  - Facebook完整采集
-  tiktok_full    - TikTok完整采集
-  twitter_full   - Twitter完整采集（5个行为 x 10次）
-  twitter_test   - Twitter测试（4个行为 x 2次）
-  zhihu_full     - 知乎完整采集（5个行为 x 10次）
-  zhihu_test     - 知乎测试（4个行为 x 2次）
+  weibo_full      - 微博完整采集（5个行为 x 10次）
+  weibo_test      - 微博测试（4个行为 x 2次）
+  instagram_full  - Instagram完整采集（4个行为）
+  instagram_test  - Instagram测试（4个行为 x 1次）
+  facebook_full   - Facebook完整采集
+  tiktok_full     - TikTok完整采集
+  twitter_full    - Twitter完整采集（5个行为 x 10次）
+  twitter_test    - Twitter测试（4个行为 x 2次）
+  zhihu_full      - 知乎完整采集（5个行为 x 10次）
+  zhihu_test      - 知乎测试（4个行为 x 2次）
         """
     )
 
@@ -663,7 +704,7 @@ def main():
 
     parser.add_argument(
         '--platform', '-p',
-        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu'],
+        choices=['weibo', 'facebook', 'tiktok', 'twitter', 'zhihu', 'instagram'],
         help='平台名称（自定义计划时使用）'
     )
 

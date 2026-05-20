@@ -417,3 +417,52 @@
 [2026-05-18 15:55:17] INFO: 浏览器已关闭，程序结束
 [2026-05-18 15:55:17] INFO: ============================================================
 
+[2026-05-19 17:33:17] INFO: ============================================================
+[2026-05-19 17:33:17] INFO: 新的运行会话开始
+[2026-05-19 17:33:17] INFO: ============================================================
+[2026-05-19 17:33:17] INFO: 脚本启动
+[2026-05-19 17:33:18] INFO: 浏览器启动成功
+[2026-05-19 17:33:59] WARNING: 检测到未登录状态，等待用户登录
+[2026-05-19 17:33:59] WARNING: 用户中断程序（Ctrl+C）
+[2026-05-19 17:35:32] INFO: ============================================================
+[2026-05-19 17:35:32] INFO: 新的运行会话开始
+[2026-05-19 17:35:32] INFO: ============================================================
+[2026-05-19 17:35:32] INFO: 脚本启动
+[2026-05-19 17:35:33] INFO: 浏览器启动成功
+[2026-05-19 17:35:56] WARNING: 用户中断程序（Ctrl+C）
+[2026-05-19 17:35:57] WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52336): Failed to establish a new connection: [Errno 61] Connection refused")': /session/5377611965604372f7e71553b97e3cf7
+[2026-05-19 17:35:57] WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52336): Failed to establish a new connection: [Errno 61] Connection refused")': /session/5377611965604372f7e71553b97e3cf7
+[2026-05-19 17:35:57] WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52336): Failed to establish a new connection: [Errno 61] Connection refused")': /session/5377611965604372f7e71553b97e3cf7
+[2026-05-19 17:35:57] INFO: 浏览器已关闭，程序结束
+[2026-05-19 17:35:57] INFO: ============================================================
+
+[2026-05-19 17:37:29] INFO: ============================================================
+[2026-05-19 17:37:29] INFO: 新的运行会话开始
+[2026-05-19 17:37:29] INFO: ============================================================
+[2026-05-19 17:37:29] INFO: 脚本启动
+[2026-05-19 17:37:30] INFO: 浏览器启动成功
+[2026-05-19 17:37:40] INFO: 已登录状态
+[2026-05-19 17:39:02] INFO: 开始纯浏览测试
+[2026-05-19 17:39:15] WARNING: 用户中断程序（Ctrl+C）
+[2026-05-19 17:39:16] WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52671): Failed to establish a new connection: [Errno 61] Connection refused")': /session/f0434e0e7561c25fe49d372e6a88b7ab
+[2026-05-19 17:39:16] WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52671): Failed to establish a new connection: [Errno 61] Connection refused")': /session/f0434e0e7561c25fe49d372e6a88b7ab
+[2026-05-19 17:39:16] WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52671): Failed to establish a new connection: [Errno 61] Connection refused")': /session/f0434e0e7561c25fe49d372e6a88b7ab
+[2026-05-19 17:39:16] INFO: 浏览器已关闭，程序结束
+[2026-05-19 17:39:16] INFO: ============================================================
+
+[2026-05-20 14:34:10] INFO: ============================================================
+[2026-05-20 14:34:10] INFO: 新的运行会话开始
+[2026-05-20 14:34:10] INFO: ============================================================
+[2026-05-20 14:34:10] INFO: 脚本启动
+[2026-05-20 14:34:12] INFO: 浏览器启动成功
+[2026-05-20 14:34:22] INFO: 已登录状态
+[2026-05-20 14:34:27] INFO: 开始发帖测试
+[2026-05-20 14:34:27] INFO: 触发自动发帖（第 1 次循环）
+[2026-05-20 14:34:30] INFO: 发布微博成功: 相信自己
+[2026-05-20 14:34:39] WARNING: 用户中断程序（Ctrl+C）
+[2026-05-20 14:34:39] WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52578): Failed to establish a new connection: [Errno 61] Connection refused")': /session/8a47f9159eed3fdd585f75f64f51fa0d
+[2026-05-20 14:34:39] WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52578): Failed to establish a new connection: [Errno 61] Connection refused")': /session/8a47f9159eed3fdd585f75f64f51fa0d
+[2026-05-20 14:34:39] WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=52578): Failed to establish a new connection: [Errno 61] Connection refused")': /session/8a47f9159eed3fdd585f75f64f51fa0d
+[2026-05-20 14:34:39] INFO: 浏览器已关闭，程序结束
+[2026-05-20 14:34:39] INFO: ============================================================
+
