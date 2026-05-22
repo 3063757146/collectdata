@@ -310,78 +310,158 @@ def like_content(driver, content_element):
     try:
         print(f"      🔍 查找点赞按钮...")
 
-        # 知乎的点赞按钮选择器（基于实际HTML）
-        like_selectors = [
-            # 方法1: 通过 class VoteButton
-            ('CSS', 'button.VoteButton'),
+        # 信息流会重绘，避免持有 Selenium 老元素，使用 JS 即时查找和点击。
+        like_result = None
 
-            # 方法2: 通过 aria-label 包含"赞同"
-            ('CSS', 'button[aria-label*="赞同"]'),
-        ]
+        # 优先在当前内容容器内查找
+        try:
+            like_result = driver.execute_script("""
+                const root = arguments[0];
 
-        for method, selector in like_selectors:
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0;
+                }
+
+                function getState(btn) {
+                    const aria = (btn.getAttribute('aria-label') || '').trim();
+                    const cls = btn.className || '';
+                    const text = (btn.innerText || '').trim();
+                    const isLiked = /已赞同|取消赞同/.test(aria) || cls.includes('is-active') || cls.includes('VoteButton--up');
+                    return { aria, cls, text, isLiked };
+                }
+
+                function pickVoteButton(scope) {
+                    if (!scope) return null;
+                    const buttons = Array.from(scope.querySelectorAll('button.VoteButton, button[aria-label*="赞同"], button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        const cls = btn.className || '';
+                        const text = (btn.innerText || '').trim();
+                        return /赞同/.test(aria) || /赞同/.test(text) || cls.includes('VoteButton');
+                    });
+                    if (!candidates.length) return null;
+
+                    // 优先明确“赞同xx”按钮
+                    let target = candidates.find(btn => /赞同/.test((btn.getAttribute('aria-label') || '') + ' ' + (btn.innerText || '')));
+                    if (!target) target = candidates[0];
+                    return target;
+                }
+
+                const btn = pickVoteButton(root);
+                if (!btn) return { status: 'not_found' };
+
+                const before = getState(btn);
+                if (before.isLiked) {
+                    return { status: 'already_liked', text: before.text || before.aria };
+                }
+
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+
+                const after = getState(btn);
+                if (after.isLiked) {
+                    return { status: 'clicked_verified', text: after.text || after.aria };
+                }
+                return { status: 'clicked_unverified', text: after.text || after.aria };
+            """, content_element)
+        except Exception as e:
+            if 'stale' in str(e).lower():
+                print("      ⚠️  当前内容元素已刷新，改用全局查找点赞按钮...")
+
+        # 失败时退化到全局视口可见区域
+        if not like_result or like_result.get('status') == 'not_found':
             try:
-                if method == 'CSS':
-                    elements = content_element.find_elements(By.CSS_SELECTOR, selector)
-                else:
-                    elements = content_element.find_elements(By.XPATH, selector)
+                like_result = driver.execute_script("""
+                    function isVisible(el) {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        const rect = el.getBoundingClientRect();
+                        return style.display !== 'none' && style.visibility !== 'hidden' &&
+                               rect.width > 0 && rect.height > 0 &&
+                               rect.bottom >= 0 && rect.top <= window.innerHeight;
+                    }
 
-                if elements:
-                    for elem in elements:
-                        try:
-                            if not elem.is_displayed():
-                                continue
+                    function getState(btn) {
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        const cls = btn.className || '';
+                        const text = (btn.innerText || '').trim();
+                        const isLiked = /已赞同|取消赞同/.test(aria) || cls.includes('is-active') || cls.includes('VoteButton--up');
+                        return { aria, cls, text, isLiked };
+                    }
 
-                            # 检查是否已经点赞
-                            aria_label = elem.get_attribute('aria-label') or ''
-                            class_name = elem.get_attribute('class') or ''
+                    const buttons = Array.from(document.querySelectorAll('button.VoteButton, button[aria-label*="赞同"], button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        const cls = btn.className || '';
+                        const text = (btn.innerText || '').trim();
+                        return /赞同/.test(aria) || /赞同/.test(text) || cls.includes('VoteButton');
+                    });
+                    if (!candidates.length) return { status: 'not_found' };
 
-                            # 如果 aria-label 包含"取消赞同"说明已经点赞过了
-                            if '取消赞同' in aria_label or 'is-active' in class_name:
-                                print("      ⚠️  已经点赞过了，跳过")
-                                logging.info("点赞跳过：已点赞")
-                                return True
+                    let btn = candidates.find(b => /赞同/.test((b.getAttribute('aria-label') || '') + ' ' + (b.innerText || '')));
+                    if (!btn) btn = candidates[0];
 
-                            # 只处理包含"赞同"的按钮（不是"反对"）
-                            if '赞同' not in aria_label:
-                                continue
+                    const before = getState(btn);
+                    if (before.isLiked) {
+                        return { status: 'already_liked', text: before.text || before.aria };
+                    }
 
-                            # 滚动到元素位置
-                            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-                            time.sleep(random.uniform(0.3, 0.6))
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
 
-                            # 点击
-                            try:
-                                driver.execute_script("arguments[0].click();", elem)
-                            except:
-                                elem.click()
+                    const after = getState(btn);
+                    if (after.isLiked) return { status: 'clicked_verified', text: after.text || after.aria };
+                    return { status: 'clicked_unverified', text: after.text || after.aria };
+                """)
+            except Exception:
+                pass
 
-                            # 等待状态更新
-                            time.sleep(1.5)
+        if not like_result:
+            print("      ❌ 未找到点赞按钮")
+            logging.warning("点赞失败：未找到点赞按钮")
+            return False
 
-                            # 验证点赞成功（检查按钮状态是否变化）
-                            try:
-                                new_aria = elem.get_attribute('aria-label') or ''
+        status = like_result.get('status')
+        btn_text = like_result.get('text', '')
 
-                                if '取消赞同' in new_aria:
-                                    print("      ✅ 点赞成功（已验证）")
-                                    logging.info("点赞成功")
-                                    return True
-                                else:
-                                    print(f"      ⚠️  点击了但状态未变化")
-                                    # 继续尝试下一个元素
-                                    continue
-                            except:
-                                # 无法验证，假定成功
-                                print("      ✅ 点赞操作已执行")
-                                logging.info("点赞已执行（验证异常）")
-                                return True
+        if status == 'already_liked':
+            print("      ⚠️  已经点赞过了，跳过")
+            logging.info("点赞跳过：已点赞")
+            return True
 
-                        except Exception as e:
-                            print(f"      ⚠️  点击失败: {str(e)[:50]}")
-                            continue
-            except:
-                continue
+        if status == 'clicked_verified':
+            print(f"      ✅ 点赞成功（已验证）{f' - {btn_text}' if btn_text else ''}")
+            logging.info("点赞成功")
+            return True
+
+        if status == 'clicked_unverified':
+            # 给前端状态一点时间再复查一次，避免“其实成功但瞬时未更新”被误判。
+            time.sleep(1.0)
+            recheck = driver.execute_script("""
+                const buttons = Array.from(document.querySelectorAll('button.VoteButton, button[aria-label*="赞同"]'));
+                for (const btn of buttons) {
+                    const aria = (btn.getAttribute('aria-label') || '').trim();
+                    const cls = btn.className || '';
+                    if (/已赞同|取消赞同/.test(aria) || cls.includes('is-active') || cls.includes('VoteButton--up')) {
+                        return true;
+                    }
+                }
+                return false;
+            """)
+            if recheck:
+                print("      ✅ 点赞成功（延迟复查确认）")
+                logging.info("点赞成功（延迟复查）")
+                return True
+
+            print("      ⚠️  点击了但状态未变化")
+            logging.warning("点赞状态未确认")
+            return False
 
         print("      ❌ 未找到点赞按钮")
         logging.warning("点赞失败：未找到点赞按钮")
@@ -487,36 +567,94 @@ def comment_content(driver, content_element, content_list):
     try:
         print(f"      🔍 查找评论按钮...")
 
-        # 查找评论按钮（文本包含"条评论"）
-        comment_button = None
-        comment_selectors = [
-            './/button[contains(text(), "条评论")]',
-            './/button[contains(text(), "评论")]',
-        ]
+        # 知乎信息流会频繁重绘，Selenium 缓存元素容易 stale。
+        # 这里改为 JS 即时查找+点击，优先在当前 content_element 内，失败再退到全局可见区域。
+        click_msg = None
 
-        for selector in comment_selectors:
+        # 先尝试在当前内容容器内点击
+        try:
+            click_msg = driver.execute_script("""
+                const root = arguments[0];
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0;
+                }
+
+                function pickAndClick(scope) {
+                    if (!scope) return null;
+                    const buttons = Array.from(scope.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const text = (btn.innerText || '').trim();
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        const cls = btn.className || '';
+                        return /条评论|评论/i.test(text) || /评论|comment/i.test(aria) ||
+                               (cls.includes('ContentItem-action') && /评论/i.test(text));
+                    });
+                    if (!candidates.length) return null;
+
+                    // 优先“xx 条评论”这种最明确的按钮
+                    let target = candidates.find(btn => /\\d+\\s*条评论/.test((btn.innerText || '').trim()));
+                    if (!target) {
+                        target = candidates.find(btn => /条评论|评论/i.test((btn.innerText || '').trim()));
+                    }
+                    if (!target) target = candidates[0];
+
+                    target.scrollIntoView({ block: 'center' });
+                    target.click();
+                    return (target.innerText || target.getAttribute('aria-label') || '评论按钮').trim();
+                }
+
+                return pickAndClick(root);
+            """, content_element)
+        except Exception as e:
+            if 'stale' in str(e).lower():
+                print("      ⚠️  当前内容元素已刷新，改用全局查找评论按钮...")
+
+        # 失败时退化到全局查找（仅取视口中可见按钮）
+        if not click_msg:
             try:
-                elements = content_element.find_elements(By.XPATH, selector)
-                for elem in elements:
-                    if elem.is_displayed():
-                        comment_button = elem
-                        print(f"      ✅ 找到评论按钮")
-                        break
-                if comment_button:
-                    break
-            except:
-                continue
+                click_msg = driver.execute_script("""
+                    function isVisible(el) {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        const rect = el.getBoundingClientRect();
+                        return style.display !== 'none' && style.visibility !== 'hidden' &&
+                               rect.width > 0 && rect.height > 0 &&
+                               rect.bottom >= 0 && rect.top <= window.innerHeight;
+                    }
 
-        if not comment_button:
+                    const buttons = Array.from(document.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const text = (btn.innerText || '').trim();
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        const cls = btn.className || '';
+                        return /条评论|评论/i.test(text) || /评论|comment/i.test(aria) ||
+                               (cls.includes('ContentItem-action') && /评论/i.test(text));
+                    });
+
+                    if (!candidates.length) return null;
+                    let target = candidates.find(btn => /\\d+\\s*条评论/.test((btn.innerText || '').trim()));
+                    if (!target) target = candidates.find(btn => /条评论|评论/i.test((btn.innerText || '').trim()));
+                    if (!target) target = candidates[0];
+
+                    target.scrollIntoView({ block: 'center' });
+                    target.click();
+                    return (target.innerText || target.getAttribute('aria-label') || '评论按钮').trim();
+                """)
+            except Exception:
+                pass
+
+        if not click_msg:
             print("      ❌ 未找到评论按钮")
             logging.warning("评论失败：未找到评论按钮")
             return False
 
-        # 点击评论按钮
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", comment_button)
-        time.sleep(0.5)
-        driver.execute_script("arguments[0].click();", comment_button)
-        print("      ✅ 点击评论按钮，等待输入框...")
+        print(f"      ✅ 已点击评论按钮（{click_msg}），等待输入框...")
         time.sleep(2)
 
         # 查找评论输入框（Draft.js 编辑器）

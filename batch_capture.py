@@ -94,10 +94,10 @@ CAPTURE_PLANS = {
     'instagram_full': {
         'platform': 'instagram',
         'tasks': [
-            ('like', 10),
-            ('comment', 2),
-            ('share', 1),
-            ('browse', 10),
+            ('like', 0),
+            ('comment', 5),
+            ('share', 3),
+            ('browse', 0),
         ]
     },
 
@@ -116,11 +116,11 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 5),
-            ('comment', 2),
-            ('share', 1),     # Facebook 使用 share 而不是 repost
-            ('post', 1),      # 发帖少一点
-            ('browse', 10),
+            ('like', 8),
+            ('comment', 3),
+            ('share', 2),     # Facebook 使用 share 而不是 repost
+            ('post', 2),      # 发帖少一点
+            ('browse', 0),
         ]
     },
 
@@ -130,7 +130,7 @@ CAPTURE_PLANS = {
         'tasks': [
             ('like', 0),
             ('comment', 5),
-            ('browse', 1),
+            ('browse', 0),
         ]
     },
 
@@ -138,11 +138,11 @@ CAPTURE_PLANS = {
     'twitter_full': {
         'platform': 'twitter',
         'tasks': [
-            ('like', 5),
-            ('comment', 1),
-            ('retweet', 1),
-            ('post', 1),
-            ('browse', 10),
+            ('like', 2),
+            ('comment', 3),
+            ('retweet', 4),
+            ('post', 4),
+            ('browse', 0),
         ]
     },
 

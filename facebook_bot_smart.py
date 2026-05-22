@@ -168,93 +168,63 @@ def like_post(driver, post_element):
     try:
         print(f"      🔍 查找点赞按钮...")
 
-        # 策略1: 使用 data-ad-rendering-role="like_button"（最可靠）
-        try:
-            like_markers = post_element.find_elements(By.CSS_SELECTOR, '[data-ad-rendering-role="like_button"]')
-            if like_markers:
-                print(f"      ✓ 找到 {len(like_markers)} 个点赞标识元素")
+        # 先滚动到帖子，确保操作栏可见
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", post_element)
+        time.sleep(0.5)
 
-                for marker in like_markers:
-                    try:
-                        # 向上查找可点击的容器（通常是祖父或曾祖父元素）
-                        clickable = marker.find_element(By.XPATH, './ancestor::div[@class][1]')
+        # 核心策略：用 JS 从 post_element 向上找包含 like_button 的最近祖先容器
+        # Facebook 的 article 和操作栏可能是兄弟节点，不是父子关系
+        like_container = driver.execute_script("""
+            var el = arguments[0];
+            // 向上遍历最多10层，找到包含 like_button 标记的容器
+            for (var i = 0; i < 10 && el && el !== document.body; i++) {
+                var marker = el.querySelector('[data-ad-rendering-role="like_button"]');
+                if (marker) return marker.closest('div[class]');
+                el = el.parentElement;
+            }
+            return null;
+        """, post_element)
 
-                        if clickable and clickable.is_displayed():
-                            # 滚动到元素
-                            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", clickable)
-                            time.sleep(0.5)
+        if like_container:
+            try:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", like_container)
+                time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", like_container)
+                print("      ✅ 点赞成功（JS遍历 data-ad-rendering-role）")
+                logging.info("点赞成功")
+                time.sleep(random.uniform(1.0, 2.0))
+                return True
+            except Exception as e:
+                print(f"      ⚠️  JS策略点击失败: {e}")
 
-                            # 点击
-                            driver.execute_script("arguments[0].click();", clickable)
-                            print("      ✅ 点赞成功（通过 data-ad-rendering-role）")
-                            logging.info("点赞成功")
-                            time.sleep(random.uniform(1.0, 2.0))
-                            return True
-                    except:
-                        continue
-        except:
-            pass
+        # 备用策略：用 JS 找最近的 i[data-visualcompletion="css-img"] 图标
+        icon_container = driver.execute_script("""
+            var el = arguments[0];
+            for (var i = 0; i < 10 && el && el !== document.body; i++) {
+                var icons = el.querySelectorAll('i[data-visualcompletion="css-img"]');
+                for (var j = 0; j < icons.length; j++) {
+                    var style = icons[j].getAttribute('style') || '';
+                    if (style.indexOf('background-image') !== -1) {
+                        // 返回图标的最近带 class 的 div 祖先
+                        return icons[j].closest('div[class]');
+                    }
+                }
+                el = el.parentElement;
+            }
+            return null;
+        """, post_element)
 
-        # 策略2: 查找包含"赞"或"Like"文字的元素
-        try:
-            text_elements = post_element.find_elements(By.XPATH, './/span[text()="赞" or text()="Like"]')
-            if text_elements:
-                print(f"      ✓ 找到 {len(text_elements)} 个文字匹配元素")
-
-                for elem in text_elements:
-                    try:
-                        if not elem.is_displayed():
-                            continue
-
-                        # 向上找到最外层的可点击容器
-                        # 结构: span -> span -> div -> div (最外层)
-                        clickable = elem.find_element(By.XPATH, './ancestor::div[contains(@class, "x9f619")][1]')
-
-                        if clickable:
-                            # 滚动
-                            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", clickable)
-                            time.sleep(0.5)
-
-                            # 点击
-                            driver.execute_script("arguments[0].click();", clickable)
-                            print("      ✅ 点赞成功（通过文字匹配）")
-                            logging.info("点赞成功")
-                            time.sleep(random.uniform(1.0, 2.0))
-                            return True
-                    except:
-                        continue
-        except:
-            pass
-
-        # 策略3: 查找点赞图标（i 标签，包含特定背景图片）
-        try:
-            icons = post_element.find_elements(By.CSS_SELECTOR, 'i[data-visualcompletion="css-img"]')
-            for icon in icons:
-                try:
-                    style = icon.get_attribute('style') or ''
-                    # 检查是否是点赞图标（通过背景图片 URL 特征）
-                    if 'background-image' in style:
-                        # 向上找可点击容器
-                        clickable = icon.find_element(By.XPATH, './ancestor::div[contains(@class, "x9f619")][1]')
-
-                        if clickable and clickable.is_displayed():
-                            # 检查附近是否有"赞"或"Like"文字（确认是点赞按钮）
-                            text = clickable.text or ''
-                            if '赞' in text or 'Like' in text:
-                                # 滚动
-                                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", clickable)
-                                time.sleep(0.5)
-
-                                # 点击
-                                driver.execute_script("arguments[0].click();", clickable)
-                                print("      ✅ 点赞成功（通过图标匹配）")
-                                logging.info("点赞成功")
-                                time.sleep(random.uniform(1.0, 2.0))
-                                return True
-                except:
-                    continue
-        except:
-            pass
+        if icon_container:
+            try:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", icon_container)
+                time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", icon_container)
+                print("      ✅ 点赞成功（JS遍历图标）")
+                logging.info("点赞成功")
+                time.sleep(random.uniform(1.0, 2.0))
+                return True
+            except Exception as e:
+                print(f"      ⚠️  图标策略点击失败: {e}")
 
         print("      ❌ 未找到可用的点赞按钮")
         logging.warning("点赞失败：未找到点赞按钮")
@@ -299,40 +269,48 @@ def comment_post(driver, post_element, comment_list):
     try:
         print(f"      🔍 查找评论按钮...")
 
-        # 查找评论按钮（中英文，多种策略）
-        comment_btn_selectors = [
-            # 中文
-            ('XPATH', './/span[text()="评论"]', '文本"评论"（精确）'),
-            ('XPATH', './/span[contains(text(), "评论")]', '文本"评论"（包含）'),
-            # 英文
-            ('XPATH', './/span[text()="Comment"]', '文本"Comment"（精确）'),
-            ('XPATH', './/span[contains(text(), "Comment")]', '文本"Comment"（包含）'),
-            # aria-label
-            ('XPATH', './/*[@aria-label="评论" or @aria-label="Comment"]', 'aria-label'),
-        ]
+        # 核心策略：用 JS 从 post_element 向上遍历，找 data-ad-rendering-role="comment_button"
+        # （和 like_post 一样，评论按钮不在 article 子树内）
+        comment_btn = driver.execute_script("""
+            var el = arguments[0];
+            for (var i = 0; i < 10 && el && el !== document.body; i++) {
+                var marker = el.querySelector('[data-ad-rendering-role="comment_button"]');
+                if (marker) return marker.closest('div[class]');
+                el = el.parentElement;
+            }
+            return null;
+        """, post_element)
 
-        comment_btn = None
-        for method, selector, desc in comment_btn_selectors:
-            try:
-                elements = post_element.find_elements(By.XPATH, selector)
-                for elem in elements:
-                    if elem.is_displayed():
-                        # 找到文字元素后，向上找可点击的父容器
-                        try:
-                            clickable = elem.find_element(By.XPATH, './ancestor::div[contains(@class, "x9f619")][1]')
-                            if clickable:
-                                comment_btn = clickable
-                                print(f"      ✓ 找到评论按钮（{desc}）")
+        if comment_btn:
+            print(f"      ✓ 找到评论按钮（JS遍历 data-ad-rendering-role）")
+        else:
+            # 备用：文本匹配（多语言）
+            comment_btn_selectors = [
+                ('XPATH', './/span[text()="评论"]', '文本"评论"'),
+                ('XPATH', './/span[text()="Comment"]', '文本"Comment"'),
+                ('XPATH', './/span[text()="Коментар"]', '文本"Коментар"'),
+                ('XPATH', './/*[@aria-label="评论" or @aria-label="Comment"]', 'aria-label'),
+            ]
+
+            for method, selector, desc in comment_btn_selectors:
+                try:
+                    elements = post_element.find_elements(By.XPATH, selector)
+                    for elem in elements:
+                        if elem.is_displayed():
+                            try:
+                                clickable = elem.find_element(By.XPATH, './ancestor::div[contains(@class, "x9f619")][1]')
+                                if clickable:
+                                    comment_btn = clickable
+                                    print(f"      ✓ 找到评论按钮（{desc}）")
+                                    break
+                            except:
+                                comment_btn = elem
+                                print(f"      ✓ 找到评论按钮（{desc}，直接元素）")
                                 break
-                        except:
-                            # 如果找不到特定父元素，就点击元素本身
-                            comment_btn = elem
-                            print(f"      ✓ 找到评论按钮（{desc}，直接元素）")
-                            break
-                if comment_btn:
-                    break
-            except:
-                continue
+                    if comment_btn:
+                        break
+                except:
+                    continue
 
         if not comment_btn:
             print("      ⚠️  未找到评论按钮")
@@ -961,63 +939,20 @@ def share_post(driver, post_element, share_templates):
 
         share_btn = None
 
-        # 策略1: 使用 data-ad-rendering-role="share_button"（最可靠，类似点赞按钮）
-        try:
-            share_markers = post_element.find_elements(By.CSS_SELECTOR, '[data-ad-rendering-role="share_button"]')
-            if share_markers:
-                print(f"      ✓ 找到 {len(share_markers)} 个分享标识元素")
+        # 核心策略：用 JS 从 post_element 向上遍历，找 data-ad-rendering-role="share_button"
+        # （和 like_post/comment_post 一样，分享按钮不在 article 子树内）
+        share_btn = driver.execute_script("""
+            var el = arguments[0];
+            for (var i = 0; i < 10 && el && el !== document.body; i++) {
+                var marker = el.querySelector('[data-ad-rendering-role="share_button"]');
+                if (marker) return marker.closest('div[class]');
+                el = el.parentElement;
+            }
+            return null;
+        """, post_element)
 
-                for marker in share_markers:
-                    try:
-                        # 向上查找可点击的容器（和点赞按钮类似的结构）
-                        # 通常需要向上多层才能找到最外层可点击容器
-                        clickable = marker.find_element(By.XPATH, './ancestor::div[contains(@class, "x9f619")][1]')
-
-                        if clickable and clickable.is_displayed():
-                            share_btn = clickable
-                            print("      ✓ 找到分享按钮（通过 data-ad-rendering-role）")
-                            break
-                    except:
-                        # 如果找不到特定容器，尝试向上2层
-                        try:
-                            clickable = marker.find_element(By.XPATH, '../..')
-                            if clickable and clickable.is_displayed():
-                                share_btn = clickable
-                                print("      ✓ 找到分享按钮（向上2层）")
-                                break
-                        except:
-                            continue
-        except:
-            pass
-
-        # 策略2: 文本匹配 + 容器查找
-        if not share_btn:
-            share_btn_selectors = [
-                # 文本匹配 + 向上查找容器
-                ('XPATH', './/span[text()="分享"]/ancestor::div[contains(@class, "x9f619")][1]', '文本"分享"+容器'),
-                ('XPATH', './/span[text()="Share"]/ancestor::div[contains(@class, "x9f619")][1]', '文本"Share"+容器'),
-
-                # 文本匹配（精确）
-                ('XPATH', './/span[text()="分享"]', '文本"分享"'),
-                ('XPATH', './/span[text()="Share"]', '文本"Share"'),
-
-                # aria-label
-                ('XPATH', './/*[@aria-label="分享"]', 'aria-label 分享'),
-                ('XPATH', './/*[@aria-label="Share"]', 'aria-label Share'),
-            ]
-
-            for method, selector, desc in share_btn_selectors:
-                try:
-                    elements = post_element.find_elements(By.XPATH, selector)
-                    for elem in elements:
-                        if elem.is_displayed():
-                            share_btn = elem
-                            print(f"      ✓ 找到分享按钮（{desc}）")
-                            break
-                    if share_btn:
-                        break
-                except:
-                    continue
+        if share_btn:
+            print("      ✓ 找到分享按钮（JS遍历 data-ad-rendering-role）")
 
         if not share_btn:
             print("      ⚠️  未找到分享按钮")

@@ -1,17 +1,29 @@
 #!/bin/bash
 # 交替执行 TikTok 和 Weibo 批量抓包的循环脚本
 
+# 发生错误时尽早失败（避免静默错误）
+set -o pipefail
+
 # 颜色定义
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# 日志配置：控制台输出同时写入日志文件
+LOG_DIR="logs/batch_loop"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/run_batch_loop_$(date '+%Y%m%d_%H%M%S').log"
+
+# 将 stdout/stderr 同时输出到控制台和日志文件
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}  批量抓包循环脚本${NC}"
 echo -e "${YELLOW}  Instagram → Facebook → 知乎 → Twitter → TikTok → 微博${NC}"
 echo -e "${YELLOW}  按 Ctrl+C 停止${NC}"
 echo -e "${YELLOW}======================================${NC}"
+echo -e "${GREEN}日志文件: $LOG_FILE${NC}"
 echo ""
 
 # ============================================================
@@ -49,6 +61,21 @@ while true; do
     echo -e "${BLUE}第 ${iteration} 轮${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
+
+    echo ""
+    sleep 3  # 间隔3秒
+
+    # # 3. 执行 知乎
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
+    sudo python3 batch_capture.py --config zhihu_full
+    zhihu_exit_code=$?
+
+    if [ $zhihu_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  知乎 批量抓包异常退出 (exit code: $zhihu_exit_code)${NC}"
+    else
+        echo -e "${GREEN}✅ 知乎 批量抓包完成${NC}"
+    fi
+    
     # 1. 执行 Instagram
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
     sudo python3 batch_capture.py --config instagram_full
@@ -74,19 +101,7 @@ while true; do
         echo -e "${GREEN}✅ Facebook 批量抓包完成${NC}"
     fi
 
-    echo ""
-    sleep 3  # 间隔3秒
-
-    # # 3. 执行 知乎
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
-    sudo python3 batch_capture.py --config zhihu_full
-    zhihu_exit_code=$?
-
-    if [ $zhihu_exit_code -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  知乎 批量抓包异常退出 (exit code: $zhihu_exit_code)${NC}"
-    else
-        echo -e "${GREEN}✅ 知乎 批量抓包完成${NC}"
-    fi
+ 
 
     echo ""
     sleep 3  # 间隔3秒
