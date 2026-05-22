@@ -77,7 +77,7 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
-    # 3. 执行 知乎
+    # # 3. 执行 知乎
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
     sudo python3 batch_capture.py --config zhihu_full
     zhihu_exit_code=$?

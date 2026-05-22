@@ -734,42 +734,55 @@ def create_post(driver, content):
         print(f"   🔍 查找发帖入口按钮...")
         create_btn = None
 
-        # 策略1: 通过文本查找
-        create_btn_selectors = [
-            # 中文
-            "//span[contains(text(), '分享你的新鲜事')]",
-            "//div[contains(text(), '分享你的新鲜事')]",
-            # 英文
-            "//span[contains(text(), \"What's on your mind\")]",
-            "//div[contains(text(), \"What's on your mind\")]",
-        ]
+        # 策略1: 语言无关 — 结构性选择器（按钮内含 line-clamp span + overlay div）
+        try:
+            buttons = driver.find_elements(By.XPATH,
+                '//div[@role="button"][.//span[contains(@style,"line-clamp")]]'
+                '[.//div[@data-visualcompletion="ignore"][@role="none"]]'
+            )
+            for btn in buttons:
+                if btn.is_displayed():
+                    create_btn = btn
+                    print(f"   ✓ 找到发帖入口按钮（结构匹配）")
+                    break
+        except:
+            pass
 
-        for selector in create_btn_selectors:
-            try:
-                elements = driver.find_elements(By.XPATH, selector)
-                for elem in elements:
-                    if elem.is_displayed():
-                        # 向上查找可点击的容器
-                        try:
-                            clickable = elem.find_element(By.XPATH, './ancestor::div[@role="button"][1]')
-                            if clickable:
-                                create_btn = clickable
-                                print(f"   ✓ 找到发帖入口按钮")
-                                break
-                        except:
-                            # 如果找不到 role="button"，尝试其他祖先元素
+        # 策略2: 通过文本查找（多语言）
+        if not create_btn:
+            create_btn_selectors = [
+                # 中文
+                "//span[contains(text(), '分享你的新鲜事')]",
+                # 英文
+                "//span[contains(text(), \"What's on your mind\")]",
+                # 保加利亚语
+                "//span[contains(text(), 'За какво мислите')]",
+            ]
+
+            for selector in create_btn_selectors:
+                try:
+                    elements = driver.find_elements(By.XPATH, selector)
+                    for elem in elements:
+                        if elem.is_displayed():
                             try:
-                                clickable = elem.find_element(By.XPATH, './ancestor::div[@tabindex="0"][1]')
+                                clickable = elem.find_element(By.XPATH, './ancestor::div[@role="button"][1]')
                                 if clickable:
                                     create_btn = clickable
-                                    print(f"   ✓ 找到发帖入口按钮（备用）")
+                                    print(f"   ✓ 找到发帖入口按钮（文本匹配）")
                                     break
                             except:
-                                pass
-                if create_btn:
-                    break
-            except:
-                continue
+                                try:
+                                    clickable = elem.find_element(By.XPATH, './ancestor::div[@tabindex="0"][1]')
+                                    if clickable:
+                                        create_btn = clickable
+                                        print(f"   ✓ 找到发帖入口按钮（备用）")
+                                        break
+                                except:
+                                    pass
+                    if create_btn:
+                        break
+                except:
+                    continue
 
         if not create_btn:
             print("   ❌ 未找到发帖入口按钮")
@@ -789,9 +802,10 @@ def create_post(driver, content):
         input_selectors = [
             # 使用 data-lexical-editor 和 role="textbox"
             ('CSS', 'div[data-lexical-editor="true"][role="textbox"]', 'data-lexical-editor + role'),
-            # 使用 aria-placeholder
+            # 使用 aria-placeholder（多语言）
             ('XPATH', '//div[@role="textbox"][contains(@aria-placeholder, "分享你的新鲜事")]', 'aria-placeholder 中文'),
             ('XPATH', '//div[@role="textbox"][contains(@aria-placeholder, "What\'s on your mind")]', 'aria-placeholder 英文'),
+            ('XPATH', '//div[@role="textbox"][contains(@aria-placeholder, "За какво мислите")]', 'aria-placeholder 保加利亚语'),
             # 通用选择器
             ('CSS', 'div[contenteditable="true"][role="textbox"]', 'contenteditable + role'),
         ]
@@ -886,8 +900,10 @@ def create_post(driver, content):
         post_btn_selectors = [
             "//div[@aria-label='发帖'][@role='button']",
             "//div[@aria-label='Post'][@role='button']",
+            "//div[@aria-label='Публикация'][@role='button']",
             "//span[text()='发帖']/ancestor::div[@role='button'][1]",
             "//span[text()='Post']/ancestor::div[@role='button'][1]",
+            "//span[text()='Публикация']/ancestor::div[@role='button'][1]",
         ]
 
         for selector in post_btn_selectors:

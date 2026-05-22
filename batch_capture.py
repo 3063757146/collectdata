@@ -71,11 +71,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 5),
-            ('comment', 3),
-            ('repost', 2),
-            ('post', 2),      # 发帖少一点
-            ('browse', 10),
+            ('like', 0),
+            ('comment', 0),
+            ('repost', 5),
+            ('post', 5),      # 发帖少一点
+            ('browse', 0),
         ]
     },
 
@@ -96,8 +96,8 @@ CAPTURE_PLANS = {
         'tasks': [
             ('like', 10),
             ('comment', 2),
-            ('share', 0),
-            ('browse', 25),
+            ('share', 1),
+            ('browse', 10),
         ]
     },
 
@@ -116,11 +116,11 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 1),
-            ('comment', 0),
-            ('share', 0),     # Facebook 使用 share 而不是 repost
-            ('post', 0),      # 发帖少一点
-            ('browse', 15),
+            ('like', 5),
+            ('comment', 2),
+            ('share', 1),     # Facebook 使用 share 而不是 repost
+            ('post', 1),      # 发帖少一点
+            ('browse', 10),
         ]
     },
 
@@ -128,9 +128,9 @@ CAPTURE_PLANS = {
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
-            ('like', 15),
+            ('like', 0),
             ('comment', 5),
-            ('browse', 35),
+            ('browse', 1),
         ]
     },
 
@@ -140,9 +140,9 @@ CAPTURE_PLANS = {
         'tasks': [
             ('like', 5),
             ('comment', 1),
-            ('retweet', 0),
-            ('post', 0),
-            ('browse', 20),
+            ('retweet', 1),
+            ('post', 1),
+            ('browse', 10),
         ]
     },
 
@@ -161,11 +161,11 @@ CAPTURE_PLANS = {
     'zhihu_full': {
         'platform': 'zhihu',
         'tasks': [
-            ('like', 15),
-            ('comment', 5),
-            ('share', 2),      # 转发到想法
-            ('post', 2),       # 发布想法
-            ('browse', 25),
+            ('like', 0),
+            ('comment', 3),
+            ('share', 3),      # 转发到想法
+            ('post', 3),       # 发布想法
+            ('browse', 0),
         ]
     },
 
