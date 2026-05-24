@@ -54,8 +54,8 @@ def extract_features(
     try:
         # 流式读取和解析数据包
         for pkt in iter_packets(pcap_path, config, bpf_filter):
-            # 跳过0字节包（如果配置）
-            if skip_zero and pkt.length == 0:
+            # 跳过TCP载荷为0的控制包（纯ACK/SYN/FIN等）
+            if skip_zero and pkt.payload_length == 0:
                 continue
 
             # 判断方向并计算有符号包大小

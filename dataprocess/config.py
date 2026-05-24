@@ -76,8 +76,8 @@ class Config:
             True表示发送（正数），False表示接收（负数）
         """
         if perspective == "mac":
-            # macOS视角：源IP是本地IP则为发送
-            return src_ip == self.local_ip
+            # macOS视角：源IP不是VPS则为发送（避免依赖变化的local_ip）
+            return src_ip != self.vps_ip
         else:
             # VPS视角：源IP是VPS IP则为发送
             return src_ip == self.vps_ip
