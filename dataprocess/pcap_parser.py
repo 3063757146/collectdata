@@ -112,7 +112,7 @@ def iter_packets(
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,  # 忽略stderr（避免"reading from file..."信息）
+            stderr=subprocess.PIPE,
             text=True,
             bufsize=1  # 行缓冲
         )
@@ -127,7 +127,8 @@ def iter_packets(
         proc.wait()
 
         if proc.returncode != 0:
-            raise RuntimeError(f"tcpdump exited with code {proc.returncode}")
+            stderr_msg = proc.stderr.read().strip() if proc.stderr else ''
+            raise RuntimeError(f"tcpdump exited with code {proc.returncode}: {stderr_msg}")
 
     except FileNotFoundError:
         raise FileNotFoundError(f"tcpdump not found at {config.tcpdump_path}")

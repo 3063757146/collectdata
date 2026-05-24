@@ -905,67 +905,112 @@ def share_content(driver, content_element, share_templates):
     try:
         print(f"      🔍 查找分享按钮...")
 
-        # 查找分享按钮（文本包含"分享"）
-        share_button = None
-        share_selectors = [
-            './/button[contains(text(), "分享")]',
-        ]
+        # 信息流频繁重绘，分享按钮和菜单项都不能依赖缓存的 Selenium 元素。
+        share_click_msg = None
 
-        for selector in share_selectors:
+        try:
+            share_click_msg = driver.execute_script("""
+                const root = arguments[0];
+
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0;
+                }
+
+                function pickButton(scope) {
+                    if (!scope) return null;
+                    const buttons = Array.from(scope.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const text = (btn.innerText || '').trim();
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        return /分享/.test(text) || /分享|share/i.test(aria);
+                    });
+                    if (!candidates.length) return null;
+                    return candidates.find(btn => /^分享$/.test((btn.innerText || '').trim()) || /分享/.test((btn.innerText || '').trim())) || candidates[0];
+                }
+
+                const btn = pickButton(root);
+                if (!btn) return null;
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+                return (btn.innerText || btn.getAttribute('aria-label') || '分享按钮').trim();
+            """, content_element)
+        except Exception as e:
+            if 'stale' in str(e).lower():
+                print("      ⚠️  当前内容元素已刷新，改用全局查找分享按钮...")
+
+        if not share_click_msg:
             try:
-                elements = content_element.find_elements(By.XPATH, selector)
-                for elem in elements:
-                    if elem.is_displayed():
-                        share_button = elem
-                        print(f"      ✅ 找到分享按钮")
-                        break
-                if share_button:
-                    break
-            except:
-                continue
+                share_click_msg = driver.execute_script("""
+                    function isVisible(el) {
+                        if (!el) return false;
+                        const style = window.getComputedStyle(el);
+                        const rect = el.getBoundingClientRect();
+                        return style.display !== 'none' && style.visibility !== 'hidden' &&
+                               rect.width > 0 && rect.height > 0 &&
+                               rect.bottom >= 0 && rect.top <= window.innerHeight;
+                    }
 
-        if not share_button:
+                    const buttons = Array.from(document.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const candidates = buttons.filter(btn => {
+                        if (!isVisible(btn)) return false;
+                        const text = (btn.innerText || '').trim();
+                        const aria = (btn.getAttribute('aria-label') || '').trim();
+                        return /分享/.test(text) || /分享|share/i.test(aria);
+                    });
+                    if (!candidates.length) return null;
+                    const btn = candidates.find(b => /^分享$/.test((b.innerText || '').trim()) || /分享/.test((b.innerText || '').trim())) || candidates[0];
+                    btn.scrollIntoView({ block: 'center' });
+                    btn.click();
+                    return (btn.innerText || btn.getAttribute('aria-label') || '分享按钮').trim();
+                """)
+            except Exception:
+                pass
+
+        if not share_click_msg:
             print("      ❌ 未找到分享按钮")
             logging.warning("分享失败：未找到分享按钮")
             return False
 
-        # 点击分享按钮（会弹出菜单）
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", share_button)
-        time.sleep(0.5)
-        driver.execute_script("arguments[0].click();", share_button)
         print("      ✅ 点击分享按钮，等待菜单...")
         time.sleep(2)
 
         # 查找"转发到想法"选项
         print("      🔍 查找转发到想法选项...")
-        share_to_pin_selectors = [
-            '//button[contains(text(), "转发到想法")]',
-            'button.ShareMenu-button',
-            '//button[contains(@class, "ShareMenu-button")]',
-        ]
+        share_to_pin_msg = None
+        try:
+            share_to_pin_msg = driver.execute_script("""
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0;
+                }
 
-        share_to_pin = None
-        for selector in share_to_pin_selectors:
-            try:
-                if selector.startswith('//'):
-                    elements = driver.find_elements(By.XPATH, selector)
-                else:
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                const buttons = Array.from(document.querySelectorAll('button.ShareMenu-button, button'));
+                const candidates = buttons.filter(btn => {
+                    if (!isVisible(btn)) return false;
+                    const text = (btn.innerText || '').trim();
+                    const cls = btn.className || '';
+                    return /转发到想法|想法/.test(text) || cls.includes('ShareMenu-button');
+                });
+                if (!candidates.length) return null;
 
-                for elem in elements:
-                    if elem.is_displayed():
-                        # 确认是"转发到想法"按钮
-                        btn_text = elem.text.strip()
-                        if '转发到想法' in btn_text or '想法' in btn_text:
-                            share_to_pin = elem
-                            print(f"      ✅ 找到转发到想法选项")
-                            break
-                if share_to_pin:
-                    break
-            except:
-                continue
+                const btn = candidates.find(b => /转发到想法/.test((b.innerText || '').trim())) ||
+                            candidates.find(b => /想法/.test((b.innerText || '').trim())) ||
+                            candidates[0];
+                btn.click();
+                return (btn.innerText || '转发到想法').trim();
+            """)
+        except Exception:
+            pass
 
-        if not share_to_pin:
+        if not share_to_pin_msg:
             print("      ⚠️  未找到转发到想法选项")
             logging.warning("分享失败：未找到转发到想法选项")
             # 关闭菜单
@@ -976,8 +1021,6 @@ def share_content(driver, content_element, share_templates):
                 pass
             return False
 
-        # 点击"转发到想法"
-        driver.execute_script("arguments[0].click();", share_to_pin)
         print("      ✅ 点击转发到想法")
         time.sleep(2)
 
@@ -1102,51 +1145,40 @@ def share_content(driver, content_element, share_templates):
         print("      🔍 查找发布按钮...")
         time.sleep(1)
 
-        send_button_selectors = [
-            '//button[contains(@class, "Button--secondary") and contains(@class, "Button--blue") and contains(text(), "发布")]',
-            'button.Button--secondary.Button--blue',
-            '//button[contains(text(), "发布")]',
-        ]
+        publish_msg = None
+        try:
+            publish_msg = driver.execute_script("""
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0;
+                }
 
-        send_button = None
-        for selector in send_button_selectors:
-            try:
-                if selector.startswith('//'):
-                    elements = driver.find_elements(By.XPATH, selector)
-                else:
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                const buttons = Array.from(document.querySelectorAll('button.Button--secondary.Button--blue, button.Button--secondary, button'));
+                const candidates = buttons.filter(btn => {
+                    if (!isVisible(btn)) return false;
+                    const text = (btn.innerText || '').trim();
+                    return /发布/.test(text);
+                });
+                if (!candidates.length) return null;
+                const btn = candidates[0];
+                btn.scrollIntoView({ block: 'center' });
+                btn.click();
+                return (btn.innerText || '发布').trim();
+            """)
+        except Exception:
+            pass
 
-                for elem in elements:
-                    if elem.is_displayed():
-                        # 确认按钮文本是"发布"
-                        btn_text = elem.text.strip()
-                        if '发布' in btn_text:
-                            send_button = elem
-                            print(f"      ✅ 找到发布按钮")
-                            break
-                if send_button:
-                    break
-            except:
-                continue
-
-        if not send_button:
+        if not publish_msg:
             print("      ❌ 未找到发布按钮")
             logging.warning("分享失败：未找到发布按钮")
             # 关闭弹窗
             close_comment_modal(driver)
             return False
 
-        # 滚动到发布按钮位置
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", send_button)
-        time.sleep(0.5)
-
-        # 点击发布按钮
-        try:
-            driver.execute_script("arguments[0].click();", send_button)
-            print("      ✅ 点击发布按钮")
-        except:
-            send_button.click()
-            print("      ✅ 点击发布按钮（直接点击）")
+        print("      ✅ 点击发布按钮")
 
         # 等待发布完成（增加等待时间，确保服务器处理完成）
         print("      ⏳ 等待发布完成...")

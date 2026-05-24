@@ -116,10 +116,10 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 8),
+            ('like', 0),
             ('comment', 3),
-            ('share', 2),     # Facebook 使用 share 而不是 repost
-            ('post', 2),      # 发帖少一点
+            ('share', 0),     # Facebook 使用 share 而不是 repost
+            ('post', 0),      # 发帖少一点
             ('browse', 0),
         ]
     },

@@ -49,7 +49,7 @@ FORMAT_EXTENSIONS = {
 }
 
 # 已知平台列表（用于验证，不在列表内的会打印警告但不阻止处理）
-KNOWN_PLATFORMS = {'weibo', 'facebook', 'tiktok', 'twitter', 'zhihu'}
+KNOWN_PLATFORMS = {'weibo', 'facebook', 'instagram', 'tiktok', 'twitter', 'zhihu'}
 
 
 # ============================================================

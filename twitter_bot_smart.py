@@ -105,23 +105,63 @@ def get_post_templates():
         # 日常分享
         "Just thinking...", "Good morning everyone!", "Happy Friday!",
         "Starting the weekend right!", "Beautiful day today!",
+        "Another day, another adventure!", "Weekend vibes! 🎉",
+        "Monday motivation!", "Midweek check-in!", "Sunday reset!",
+        "Coffee and thoughts ☕", "Late night thoughts...",
 
         # 学习分享
         "Learning something new every day!", "Today's insight:",
         "Just realized...", "Quick thought:",
+        "TIL something fascinating!", "Reading list update:",
+        "Brain dump time:", "Hot take:", "Unpopular opinion:",
+        "Here's what I learned today:", "Note to self:",
+        "Random thought of the day:", "Shower thought:",
 
         # 励志正能量
         "Keep pushing forward!", "You got this! 💪",
         "Stay positive!", "Make today count!",
         "One step at a time!", "Progress over perfection!",
+        "Don't give up!", "Trust the process!",
+        "Consistency is key!", "Believe in yourself!",
+        "Hard work pays off!", "Dream big, start small!",
+        "Your future self will thank you!", "Keep going! 🚀",
 
         # 生活态度
         "Life is good! 😊", "Grateful for today!",
         "Living in the moment!", "Small wins matter!",
+        "Appreciate the little things!", "Slow down and breathe.",
+        "Choose happiness!", "Vibes are immaculate today!",
+        "Main character energy! ✨", "No bad days!",
+        "Peace of mind is priceless.", "Less drama, more karma.",
 
         # 简短感悟
         "Sometimes less is more.", "Quality over quantity.",
         "Focus on what matters.", "Every day is a new opportunity.",
+        "Change is the only constant.", "Actions speak louder.",
+        "Patience is a virtue.", "Time flies when you're having fun.",
+        "The journey matters more than the destination.",
+        "Be the change you want to see.", "Stay curious! 🧐",
+
+        # 科技/互联网
+        "The internet never sleeps.", "AI is changing everything!",
+        "Tech moves fast!", "Future is now!",
+        "Coding at 2am hits different.", "Debugging life one day at a time.",
+        "The algorithm knows me too well 😂",
+
+        # 天气/季节
+        "Perfect weather today! ☀️", "Rainy day mood 🌧️",
+        "Spring energy! 🌸", "Summer is calling! 🏖️",
+        "Autumn leaves and cozy vibes 🍂", "Winter wonderland! ❄️",
+
+        # 食物/生活
+        "Best meal ever! 🍕", "Coffee first, everything else later ☕",
+        "Cooking something special tonight!", "Foodie life! 🍜",
+        "Hydration check! 💧", "Gym done! 💪",
+
+        # 周末/休闲
+        "Netflix and chill kind of day.", "Book recommendations welcome! 📚",
+        "Playlist on repeat 🎵", "Road trip vibes! 🚗",
+        "Nature therapy 🌿", "Sunset chaser! 🌅",
     ]
 
 

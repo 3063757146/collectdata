@@ -76,18 +76,18 @@ while true; do
         echo -e "${GREEN}✅ 知乎 批量抓包完成${NC}"
     fi
     
-    # 1. 执行 Instagram
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
-    sudo python3 batch_capture.py --config instagram_full
-    instagram_exit_code=$?
+    # # 1. 执行 Instagram
+    # echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
+    # sudo python3 batch_capture.py --config instagram_full
+    # instagram_exit_code=$?
 
-    if [ $instagram_exit_code -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  Instagram 批量抓包异常退出 (exit code: $instagram_exit_code)${NC}"
-    else
-        echo -e "${GREEN}✅ Instagram 批量抓包完成${NC}"
-    fi
+    # if [ $instagram_exit_code -ne 0 ]; then
+    #     echo -e "${YELLOW}⚠️  Instagram 批量抓包异常退出 (exit code: $instagram_exit_code)${NC}"
+    # else
+    #     echo -e "${GREEN}✅ Instagram 批量抓包完成${NC}"
+    # fi
 
-    echo ""
+    # echo ""
     sleep 3  # 间隔3秒
 
     # 2. 执行 Facebook

@@ -13,6 +13,13 @@ DIRS = [
     "/Users/shuai/Desktop/collcetdata/output/vps",
 ]
 
+# 行为归一化：将不同平台的“分享”类动作合并到同一列
+ACTION_ALIAS = {
+    "repost": "share",
+    "retweet": "share",
+    "share": "share",
+}
+
 
 def parse_filename(filename):
     """
@@ -24,7 +31,10 @@ def parse_filename(filename):
     parts = name.split("_")
     # parts[0]=日期 parts[1]=时间 parts[2]=platform parts[3]=action ...
     if len(parts) >= 5:
-        return parts[2], parts[3]
+        platform = parts[2]
+        action = parts[3]
+        action = ACTION_ALIAS.get(action, action)
+        return platform, action
     return None, None
 
 
