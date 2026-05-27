@@ -25,16 +25,22 @@ def export_csv(
         output_path: 输出文件路径
         human_timestamps: True使用可读时间，False使用epoch时间戳
     """
-    with open(output_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['timestamp', 'packet_size'])
+    with open(output_path, 'w', encoding='utf-8') as f:
+        # 固定列宽对齐输出
+        fmt = "{:<18} {:>7} {:<16} {:>5} {:<16} {:>5}\n"
+        f.write(fmt.format('timestamp', 'size', 'src_ip', 'sport', 'dst_ip', 'dport'))
 
-        for timestamp, size in features:
+        for row in features:
+            timestamp, size = row[0], row[1]
+            src_ip = row[2] if len(row) > 2 else ''
+            src_port = row[3] if len(row) > 3 else ''
+            dst_ip = row[4] if len(row) > 4 else ''
+            dst_port = row[5] if len(row) > 5 else ''
             if human_timestamps:
                 ts_str = epoch_to_datetime_str(timestamp)
             else:
                 ts_str = f"{timestamp:.6f}"
-            writer.writerow([ts_str, size])
+            f.write(fmt.format(ts_str, size, src_ip, src_port, dst_ip, dst_port))
 
     print(f"✅ CSV已导出: {output_path} ({len(features)} 条)")
 
@@ -55,16 +61,20 @@ def export_json(
         indent: JSON缩进（None为紧凑格式）
     """
     data = []
-    for timestamp, size in features:
+    for row in features:
+        timestamp, size = row[0], row[1]
         if human_timestamps:
             ts = epoch_to_datetime_str(timestamp)
         else:
             ts = timestamp
 
-        data.append({
-            "timestamp": ts,
-            "size": size
-        })
+        entry = {"timestamp": ts, "size": size}
+        if len(row) > 2:
+            entry["src_ip"] = row[2]
+            entry["src_port"] = row[3]
+            entry["dst_ip"] = row[4]
+            entry["dst_port"] = row[5]
+        data.append(entry)
 
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=indent, ensure_ascii=False)

@@ -19,7 +19,7 @@ def extract_features(
     perspective: str = "mac",
     skip_zero: bool = True,
     show_progress: bool = True
-) -> List[Tuple[float, int]]:
+) -> List[Tuple[float, int, str, int, str, int]]:
     """
     从pcap文件提取流量特征
 
@@ -32,7 +32,7 @@ def extract_features(
         show_progress: 是否显示进度
 
     Returns:
-        特征列表：[(timestamp, signed_packet_size), ...]
+        特征列表：[(timestamp, signed_packet_size, src_ip, src_port, dst_ip, dst_port), ...]
         正数表示发送，负数表示接收
 
     Raises:
@@ -61,8 +61,8 @@ def extract_features(
             # 判断方向并计算有符号包大小
             signed_size = _compute_signed_size(pkt, config, perspective)
 
-            # 添加到特征列表
-            features.append((pkt.timestamp, signed_size))
+            # 添加到特征列表（含IP和端口信息）
+            features.append((pkt.timestamp, signed_size, pkt.src_ip, pkt.src_port, pkt.dst_ip, pkt.dst_port))
 
             if counter:
                 counter.increment()
