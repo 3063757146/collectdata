@@ -99,7 +99,7 @@ class CaptureConfig:
         # 基础排除规则
         exclude_rules = [
             # 排除VPS的隧道端口流量（不依赖macOS的公网IP，因为IP会变）
-            f"not port {self.vps_tunnel_port}",
+            # f"not port {self.vps_tunnel_port}",
             # 排除SSH管理流量（mac ↔ vps的SSH连接）
             "not port 22",
             # 排除DNS流量（vps → 外部的DNS查询/响应）
