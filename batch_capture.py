@@ -71,11 +71,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 0),
-            ('comment', 0),
+            ('like', 10),
+            ('comment', 5),
             ('repost', 5),
-            ('post', 5),      # 发帖少一点
-            ('browse', 0),
+            ('post', 3),      # 发帖少一点
+            ('browse', 20),
         ]
     },
 
@@ -128,9 +128,9 @@ CAPTURE_PLANS = {
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
-            ('like', 0),
+            ('like', 10),
             ('comment', 5),
-            ('browse', 0),
+            ('browse', 20),
         ]
     },
 
@@ -161,11 +161,11 @@ CAPTURE_PLANS = {
     'zhihu_full': {
         'platform': 'zhihu',
         'tasks': [
-            ('like', 0),
-            ('comment', 3),
+            ('like', 10),
+            ('comment', 5),
             ('share', 3),      # 转发到想法
-            ('post', 3),       # 发布想法
-            ('browse', 0),
+            ('post', 1),       # 发布想法
+            ('browse', 20),
         ]
     },
 
@@ -422,8 +422,9 @@ class TaskExecutor:
         Returns:
             是否成功
         """
+        run_capture_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'run_capture.py')
         cmd = [
-            'sudo', 'python3', 'run_capture.py',
+            sys.executable, run_capture_path,
             '--platform', platform,
             '--action', action,
             '--num', '1',

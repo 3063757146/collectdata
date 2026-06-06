@@ -5,6 +5,7 @@
 定义CaptureConfig数据类，集中管理所有抓包相关配置
 """
 
+import sys
 import dataclasses
 from typing import Optional, List
 
@@ -42,8 +43,8 @@ class CaptureConfig:
 
     # === 网络配置 ===
     vps_ip: str = "216.167.34.54"
-    mac_private_ip: str = "10.67.227.153"
-    mac_public_ip: str = "124.127.223.133"
+    mac_private_ip: str = "172.16.10.128"
+    mac_public_ip: str = "223.88.96.205"
     vps_tunnel_port: int = 33979
 
     # === SSH配置 ===
@@ -56,14 +57,14 @@ class CaptureConfig:
     ssh_keepalive_interval: int = 30  # 心跳间隔（秒）
 
     # === 路径配置 ===
-    local_tcpdump: str = "/usr/sbin/tcpdump"
+    local_tcpdump: str = "/usr/sbin/tcpdump" if sys.platform == "darwin" else "/usr/bin/tcpdump"
     remote_tcpdump: str = "/usr/bin/tcpdump"  # VPS上tcpdump在/usr/bin
     local_output_dir: str = "output/captures"
     remote_output_dir: str = "/root/captures"  # VPS上的pcap存储目录（永久保存）
 
     # === 抓包配置 ===
     default_timeout: int = 300  # 默认抓包超时（秒）- 5分钟
-    interface_local: str = "en0"  # macOS网络接口
+    interface_local: str = "en0" if sys.platform == "darwin" else "ens160"  # 网络接口（Ubuntu: ens160）
     interface_remote: str = "eth0"  # VPS网络接口
     snaplen: int = 0  # 抓包长度（0=完整包）
 
@@ -99,7 +100,7 @@ class CaptureConfig:
         # 基础排除规则
         exclude_rules = [
             # 排除VPS的隧道端口流量（不依赖macOS的公网IP，因为IP会变）
-            # f"not port {self.vps_tunnel_port}",
+           f"not port {self.vps_tunnel_port}",
             # 排除SSH管理流量（mac ↔ vps的SSH连接）
             "not port 22",
             # 排除DNS流量（vps → 外部的DNS查询/响应）

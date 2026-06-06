@@ -1,0 +1,10 @@
+selenium==4.44.0
+selenium-stealth==1.0.6
+undetected-chromedriver==3.5.5
+paramiko==5.0.0
+dpkt==1.9.8
+requests==2.34.2
+PySocks==1.7.1
+python-dotenv==1.2.2
+PyYAML==6.0.3
+playwright==1.59.0

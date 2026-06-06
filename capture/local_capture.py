@@ -58,14 +58,20 @@ class LocalCapture:
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
+        # 启动前清理同接口同输出文件的残留进程，避免僵尸 tcpdump 累积。
+        self._cleanup_stale_capture(output_path)
+
         # 构建tcpdump命令
         cmd = [
-            'sudo',
             self._config.local_tcpdump,
             '-i', self._config.interface_local,
             '-s', str(self._config.snaplen),
             '-w', output_path,
         ]
+
+        # 普通用户场景下，若 tcpdump 无能力位则回退 sudo。
+        if os.geteuid() != 0 and not self._can_run_tcpdump_without_sudo():
+            cmd.insert(0, 'sudo')
 
         # 添加BPF过滤器
         if bpf_filter:
@@ -171,6 +177,85 @@ class LocalCapture:
             raise
         except Exception as e:
             raise TcpdumpError(f"Failed to start tcpdump: {e}")
+
+    def _can_run_tcpdump_without_sudo(self) -> bool:
+        """判断当前环境是否可以在非 root 下直接运行 tcpdump。"""
+        try:
+            result = subprocess.run(
+                ['getcap', self._config.local_tcpdump],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=False
+            )
+            caps = result.stdout.strip()
+            return 'cap_net_raw' in caps and 'cap_net_admin' in caps
+        except Exception:
+            return False
+
+    def _cleanup_stale_capture(self, output_path: str) -> None:
+        """清理同接口同输出文件的残留 tcpdump 进程（仅 root 下执行）。"""
+        if os.geteuid() != 0:
+            return
+
+        pattern = f"{self._config.local_tcpdump} -i {self._config.interface_local} -s {self._config.snaplen} -w {output_path}"
+
+        try:
+            pid_result = subprocess.run(
+                ['pgrep', '-f', pattern],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                check=False
+            )
+
+            stale_pids = []
+            for line in pid_result.stdout.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    pid = int(line)
+                except ValueError:
+                    continue
+
+                if pid != os.getpid():
+                    stale_pids.append(pid)
+
+            if not stale_pids:
+                return
+
+            self._logger.warning(
+                f"Found stale tcpdump processes for current target, cleaning up: {stale_pids}"
+            )
+
+            for pid in stale_pids:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    continue
+                except Exception as e:
+                    self._logger.warning(f"Failed to terminate stale pid {pid}: {e}")
+
+            time.sleep(0.3)
+
+            for pid in stale_pids:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    continue
+                except Exception:
+                    continue
+
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    continue
+                except Exception as e:
+                    self._logger.warning(f"Failed to kill stale pid {pid}: {e}")
+
+        except Exception as e:
+            self._logger.warning(f"Stale capture cleanup failed (non-fatal): {e}")
 
     def stop(self) -> str:
         """

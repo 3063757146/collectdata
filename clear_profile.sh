@@ -12,12 +12,12 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 配置文件路径
-WEIBO_PROFILE="/Users/shuai/selenium_profiles/weibo"
-FACEBOOK_PROFILE="/Users/shuai/selenium_profiles/facebook"
-TIKTOK_PROFILE="/Users/shuai/selenium_profiles/tiktok"
-ZHIHU_PROFILE="/Users/shuai/selenium_profiles/zhihu"
-TWITTER_PROFILE="/Users/shuai/selenium_profiles/twitter"
-INSTAGRAM_PROFILE="/Users/shuai/selenium_profiles/instagram"
+WEIBO_PROFILE="$HOME/selenium_profiles/weibo"
+FACEBOOK_PROFILE="$HOME/selenium_profiles/facebook"
+TIKTOK_PROFILE="$HOME/selenium_profiles/tiktok"
+ZHIHU_PROFILE="$HOME/selenium_profiles/zhihu"
+TWITTER_PROFILE="$HOME/selenium_profiles/twitter"
+INSTAGRAM_PROFILE="$HOME/selenium_profiles/instagram"
 
 # 显示菜单
 show_menu() {

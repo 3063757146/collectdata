@@ -14,8 +14,8 @@ class Config:
     """流量特征提取配置"""
 
     # IP地址配置
-    local_ip: str = "10.67.227.153"          # macOS私有IP（用于weibo-15.pcapng）
-    local_public_ip: str = "124.127.223.133" # macOS公网IP（NAT后，用于all_outbound.pcap）
+    local_ip: str = "172.16.10.128"          # 本机私有IP
+    local_public_ip: str = "223.88.96.205" # 本机公网IP（NAT后）
     vps_ip: str = "216.167.34.54"            # VPS IP
 
     # 端口配置

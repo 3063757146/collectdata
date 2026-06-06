@@ -9,8 +9,8 @@ import os
 from collections import defaultdict
 
 DIRS = [
-    "/Users/shuai/Desktop/collcetdata/output/captures",
-    "/Users/shuai/Desktop/collcetdata/output/vps",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "output/captures"),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "output/vps"),
 ]
 
 # 行为归一化：将不同平台的“分享”类动作合并到同一列
