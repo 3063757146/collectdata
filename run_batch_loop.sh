@@ -4,6 +4,9 @@
 # 发生错误时尽早失败（避免静默错误）
 set -o pipefail
 
+PROJECT_DIR="/home/shuai/collcetdata"
+PYTHON_BIN="/home/shuai/miniconda3/envs/datacollect/bin/python"
+
 # 颜色定义
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -20,36 +23,33 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}  批量抓包循环脚本${NC}"
-echo -e "${YELLOW}  Instagram → Facebook → 知乎 → Twitter → TikTok → 微博${NC}"
+echo -e "${YELLOW}  当前执行顺序: Instagram → TikTok → 知乎 → 微博${NC}"
 echo -e "${YELLOW}  按 Ctrl+C 停止${NC}"
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${GREEN}日志文件: $LOG_FILE${NC}"
 echo ""
 
-# ============================================================
-# sudo 认证保持机制（输入一次密码，全程有效）
-# ============================================================
-echo -e "${YELLOW}🔐 请输入一次 sudo 密码（后续将自动保持认证）${NC}"
-sudo -v  # 先认证一次
+# 运行前检查
+if [ ! -x "$PYTHON_BIN" ]; then
+    echo -e "${YELLOW}❌ Python 解释器不存在或不可执行: $PYTHON_BIN${NC}"
+    exit 1
+fi
 
-# 后台进程：每60秒刷新一次 sudo 认证
-while true; do
-    sleep 60
-    sudo -n true 2>/dev/null
-done &
-SUDO_REFRESH_PID=$!
+if [ ! -f "$PROJECT_DIR/batch_capture.py" ]; then
+    echo -e "${YELLOW}❌ 未找到 batch_capture.py: $PROJECT_DIR/batch_capture.py${NC}"
+    exit 1
+fi
 
-echo -e "${GREEN}✅ sudo 认证已激活（PID: $SUDO_REFRESH_PID）${NC}"
+echo -e "${GREEN}✅ Python: $PYTHON_BIN${NC}"
+echo -e "${GREEN}✅ Project: $PROJECT_DIR${NC}"
 echo ""
 
 # 计数器
 iteration=1
 
-# 捕获 Ctrl+C 信号，优雅退出（同时杀死认证刷新进程）
+# 捕获 Ctrl+C 信号，优雅退出
 cleanup() {
     echo -e "\n${YELLOW}收到停止信号，清理并退出...${NC}"
-    kill $SUDO_REFRESH_PID 2>/dev/null
-    echo -e "${GREEN}✅ sudo 认证刷新已停止${NC}"
     exit 0
 }
 trap cleanup SIGINT SIGTERM
@@ -65,35 +65,24 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
-    # # 3. 执行 知乎
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
-    sudo python3 batch_capture.py --config zhihu_full
-    zhihu_exit_code=$?
+    # 1. 执行 Instagram
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
+    "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config instagram_full
+    instagram_exit_code=$?
 
-    if [ $zhihu_exit_code -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  知乎 批量抓包异常退出 (exit code: $zhihu_exit_code)${NC}"
+    if [ $instagram_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  Instagram 批量抓包异常退出 (exit code: $instagram_exit_code)${NC}"
     else
-        echo -e "${GREEN}✅ 知乎 批量抓包完成${NC}"
+        echo -e "${GREEN}✅ Instagram 批量抓包完成${NC}"
     fi
-    
-    # # 1. 执行 Instagram
-    # echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
-    # sudo python3 batch_capture.py --config instagram_full
-    # instagram_exit_code=$?
 
-    # if [ $instagram_exit_code -ne 0 ]; then
-    #     echo -e "${YELLOW}⚠️  Instagram 批量抓包异常退出 (exit code: $instagram_exit_code)${NC}"
-    # else
-    #     echo -e "${GREEN}✅ Instagram 批量抓包完成${NC}"
-    # fi
-
-    # echo ""
+    echo ""
     sleep 3  # 间隔3秒
-   
 
-    # 5. 执行 TikTok
+
+     # 5. 执行 TikTok
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: TikTok 批量抓包${NC}"
-    sudo python3 batch_capture.py --config tiktok_full
+    "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config tiktok_full
     tiktok_exit_code=$?
 
     if [ $tiktok_exit_code -ne 0 ]; then
@@ -104,10 +93,25 @@ while true; do
 
     echo ""
     sleep 3  # 间隔3秒
+    # # 3. 执行 知乎
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
+    "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config zhihu_full
+    zhihu_exit_code=$?
+
+    if [ $zhihu_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  知乎 批量抓包异常退出 (exit code: $zhihu_exit_code)${NC}"
+    else
+        echo -e "${GREEN}✅ 知乎 批量抓包完成${NC}"
+    fi
+    
+    sleep 3  # 间隔3秒
+   
+
+   
 
     # 6. 执行 Weibo
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Weibo 批量抓包${NC}"
-    sudo python3 batch_capture.py --config weibo_full
+    "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config weibo_full
     weibo_exit_code=$?
 
     if [ $weibo_exit_code -ne 0 ]; then
@@ -117,7 +121,7 @@ while true; do
     fi
 
     echo ""
-    echo -e "${BLUE}第 ${iteration} 轮完成 (Instagram → Facebook → 知乎 → Twitter → TikTok → 微博)${NC}"
+    echo -e "${BLUE}第 ${iteration} 轮完成 (Instagram → TikTok → 知乎 → 微博)${NC}"
     echo ""
 
     # 增加计数器

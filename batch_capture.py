@@ -71,11 +71,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 10),
+            ('like', 15),
             ('comment', 5),
             ('repost', 5),
             ('post', 3),      # 发帖少一点
-            ('browse', 20),
+            ('browse', 30),
         ]
     },
 
@@ -83,10 +83,11 @@ CAPTURE_PLANS = {
     'weibo_test': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 2),
-            ('comment', 2),
-            ('repost', 2),
-            ('browse', 2),
+            ('like', 1),
+            ('comment', 1),
+            ('repost', 1),
+            ('post', 1),
+            ('browse', 1),
         ]
     },
 
@@ -94,10 +95,10 @@ CAPTURE_PLANS = {
     'instagram_full': {
         'platform': 'instagram',
         'tasks': [
-            ('like', 0),
-            ('comment', 5),
-            ('share', 3),
-            ('browse', 0),
+            ('like', 3),
+            ('comment', 0),
+            ('share', 0),
+            ('browse', 10),
         ]
     },
 
@@ -123,13 +124,22 @@ CAPTURE_PLANS = {
             ('browse', 0),
         ]
     },
-
+    'facebook_test': {
+        'platform': 'facebook',
+        'tasks': [
+            ('like', 1),
+            ('comment', 1),
+            ('share', 1),
+            ('post', 1),
+            ('browse', 1),
+        ]
+    },
     # TikTok完整采集
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
             ('like', 10),
-            ('comment', 5),
+            ('comment', 0),
             ('browse', 20),
         ]
     },
@@ -161,11 +171,11 @@ CAPTURE_PLANS = {
     'zhihu_full': {
         'platform': 'zhihu',
         'tasks': [
-            ('like', 10),
+            ('like', 15),
             ('comment', 5),
             ('share', 3),      # 转发到想法
-            ('post', 1),       # 发布想法
-            ('browse', 20),
+            ('post', 2),       # 发布想法
+            ('browse', 30),
         ]
     },
 

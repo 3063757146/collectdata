@@ -14,7 +14,7 @@ class Config:
     """流量特征提取配置"""
 
     # IP地址配置
-    local_ip: str = "172.16.10.128"          # 本机私有IP
+    local_ip: str = "172.16.10.129"          # 本机私有IP
     local_public_ip: str = "223.88.96.205" # 本机公网IP（NAT后）
     vps_ip: str = "216.167.34.54"            # VPS IP
 

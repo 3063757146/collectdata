@@ -43,7 +43,7 @@ class CaptureConfig:
 
     # === 网络配置 ===
     vps_ip: str = "216.167.34.54"
-    mac_private_ip: str = "172.16.10.128"
+    mac_private_ip: str = "172.16.10.129"
     mac_public_ip: str = "223.88.96.205"
     vps_tunnel_port: int = 33979
 

@@ -8,6 +8,7 @@ Instagram 智能自动化脚本 v1.0
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
@@ -18,6 +19,7 @@ import random
 import sys
 import logging
 import os
+import shutil
 
 
 # 检查是否通过环境变量禁用装饰器抓包
@@ -102,7 +104,14 @@ def create_driver(use_proxy=True):
     """
     chrome_options = Options()
 
-    user_data_dir = os.path.expanduser('~/selenium_profiles/instagram')
+    sudo_user = os.getenv('SUDO_USER')
+    if sudo_user and sudo_user != 'root':
+        user_home = os.path.expanduser(f'~{sudo_user}')
+    else:
+        user_home = os.path.expanduser('~')
+
+    user_data_dir = os.path.join(user_home, 'selenium_profiles', 'instagram')
+    os.makedirs(user_data_dir, exist_ok=True)
     chrome_options.add_argument(f'--user-data-dir={user_data_dir}')
     chrome_options.add_argument('--profile-directory=Default')
     print(f"💾 使用配置文件: {user_data_dir}")
@@ -128,8 +137,46 @@ def create_driver(use_proxy=True):
     chrome_options.add_argument('--no-default-browser-check')
     chrome_options.add_argument('--disable-popup-blocking')
 
+    # Linux 环境稳定参数（VM/无桌面环境）
+    if sys.platform.startswith('linux'):
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--no-zygote')
+        chrome_options.add_argument('--remote-debugging-port=9222')
+
+        if not os.getenv('DISPLAY'):
+            chrome_options.add_argument('--headless=new')
+            print("🖥️ 未检测到 DISPLAY，自动启用 headless 模式")
+
+    # 自动探测浏览器可执行文件
+    browser_candidates = [
+        shutil.which('chromium-browser'),
+        shutil.which('chromium'),
+        shutil.which('google-chrome'),
+        '/snap/bin/chromium',
+    ]
+    browser_binary = next((p for p in browser_candidates if p and os.path.exists(p)), None)
+    if browser_binary:
+        chrome_options.binary_location = browser_binary
+        print(f"🌐 浏览器二进制: {browser_binary}")
+
+    # 自动探测 chromedriver 路径
+    driver_candidates = [
+        shutil.which('chromedriver'),
+        '/usr/bin/chromedriver',
+        '/usr/lib/chromium-browser/chromedriver',
+        '/snap/bin/chromedriver',
+    ]
+    driver_path = next((p for p in driver_candidates if p and os.path.exists(p)), None)
+
     try:
-        driver = webdriver.Chrome(options=chrome_options)
+        if driver_path:
+            print(f"🧭 使用驱动: {driver_path}")
+            driver = webdriver.Chrome(service=Service(driver_path), options=chrome_options)
+        else:
+            print("⚠️ 未找到 chromedriver，尝试 Selenium 自动发现...")
+            driver = webdriver.Chrome(options=chrome_options)
 
         print("🛡️  应用 Stealth 反检测模式...")
         stealth(driver,
