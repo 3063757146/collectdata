@@ -71,11 +71,11 @@ CAPTURE_PLANS = {
     'weibo_full': {
         'platform': 'weibo',
         'tasks': [
-            ('like', 15),
-            ('comment', 5),
-            ('repost', 5),
-            ('post', 3),      # 发帖少一点
-            ('browse', 30),
+            ('like', 5),
+            ('comment',3 ),
+            ('repost', 2),
+            ('post', 2),      # 发帖少一点
+            ('browse', 10),
         ]
     },
 
@@ -95,10 +95,10 @@ CAPTURE_PLANS = {
     'instagram_full': {
         'platform': 'instagram',
         'tasks': [
-            ('like', 3),
+            ('like', 5),
             ('comment', 0),
             ('share', 0),
-            ('browse', 10),
+            ('browse', 30),
         ]
     },
 
@@ -117,11 +117,11 @@ CAPTURE_PLANS = {
     'facebook_full': {
         'platform': 'facebook',
         'tasks': [
-            ('like', 0),
+            ('like', 5),
             ('comment', 3),
             ('share', 0),     # Facebook 使用 share 而不是 repost
             ('post', 0),      # 发帖少一点
-            ('browse', 0),
+            ('browse', 30),
         ]
     },
     'facebook_test': {
@@ -131,19 +131,26 @@ CAPTURE_PLANS = {
             ('comment', 1),
             ('share', 1),
             ('post', 1),
-            ('browse', 1),
+            ('browse', 0),
         ]
     },
     # TikTok完整采集
     'tiktok_full': {
         'platform': 'tiktok',
         'tasks': [
-            ('like', 10),
-            ('comment', 0),
-            ('browse', 20),
+            ('like', 5),
+            ('comment', 3),
+            ('browse', 10),
         ]
     },
-
+  'tiktok_test': {
+        'platform': 'tiktok',
+        'tasks': [
+            ('like', 1),
+            ('comment', 1),
+            ('browse', 0),
+        ]
+    },
     # Twitter完整采集
     'twitter_full': {
         'platform': 'twitter',
@@ -171,11 +178,11 @@ CAPTURE_PLANS = {
     'zhihu_full': {
         'platform': 'zhihu',
         'tasks': [
-            ('like', 15),
-            ('comment', 5),
-            ('share', 3),      # 转发到想法
+            ('like', 5),
+            ('comment', 3),
+            ('share', 2),      # 转发到想法
             ('post', 2),       # 发布想法
-            ('browse', 30),
+            ('browse', 15),
         ]
     },
 

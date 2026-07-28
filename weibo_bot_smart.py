@@ -286,14 +286,57 @@ def simulate_reading(min_sec=3, max_sec=8):
     time.sleep(reading_time)
 
 def check_login(driver):
-    """检查是否已登录"""
+    """检查是否已登录（优化版：通过用户头像判断）"""
     try:
-        login_buttons = driver.find_elements(By.XPATH, "//*[contains(text(), '登录') or contains(text(), '注册')]")
+        login_indicators = [
+            ('CSS', '[class*="_avatar_"]'),
+            ('CSS', '[class*="_avatarItem_"]'),
+            ('CSS', '.woo-badge-box img'),
+            ('CSS', '[class*="_icon_"]'),
+            ('CSS', 'img[alt="profile"]'),
+            ('CSS', 'a[href*="/u/"]'),
+            ('CSS', 'a[href*="/profile"]'),
+            ('CSS', 'a[href*="/home"]'),
+            ('XPATH', '//div[@class*="_avatar_" and @class*="_icon_"]'),
+        ]
+
+        found_indicators = []
+        for method, selector in login_indicators:
+            try:
+                if method == 'CSS':
+                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                else:
+                    elements = driver.find_elements(By.XPATH, selector)
+
+                visible_elements = [e for e in elements if e.is_displayed()]
+                if visible_elements:
+                    found_indicators.append(selector)
+                    print(f"      ✓ 检测到登录标志: {selector}")
+            except:
+                continue
+
+        if found_indicators:
+            print(f"   ✅ 已登录（检测到 {len(found_indicators)} 个登录标志）")
+            return True
+
+        login_text_elements = driver.find_elements(By.XPATH, "//*[contains(text(), '登录') or contains(text(), '注册')]")
+        if login_text_elements:
+            visible_login_text = [e for e in login_text_elements if e.is_displayed()]
+            if visible_login_text:
+                print(f"   ❌ 未登录（检测到 {len(visible_login_text)} 个登录/注册按钮）")
+                return False
+
+        print("   ⚠️  无法确定登录状态，继续检查...")
+        all_buttons = driver.find_elements(By.TAG_NAME, 'button')
+        login_buttons = [btn for btn in all_buttons if btn.is_displayed() and ('登录' in btn.text or '注册' in btn.text)]
         if login_buttons:
+            print(f"   ❌ 未登录（检测到登录按钮）")
             return False
-        user_elements = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/u/"]')
-        return len(user_elements) > 0
-    except:
+
+        return True
+
+    except Exception as e:
+        print(f"   ⚠️  登录检测异常: {e}")
         return False
 
 def wait_for_login(driver):

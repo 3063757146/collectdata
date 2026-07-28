@@ -23,7 +23,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${YELLOW}  批量抓包循环脚本${NC}"
-echo -e "${YELLOW}  当前执行顺序: Instagram → TikTok → 知乎 → 微博${NC}"
+echo -e "${YELLOW}  当前执行顺序: Instagram → Facebook → TikTok → 知乎 → 微博${NC}"
 echo -e "${YELLOW}  按 Ctrl+C 停止${NC}"
 echo -e "${YELLOW}======================================${NC}"
 echo -e "${GREEN}日志文件: $LOG_FILE${NC}"
@@ -53,19 +53,14 @@ cleanup() {
     exit 0
 }
 trap cleanup SIGINT SIGTERM
-
 # 无限循环
 while true; do
     # # 打印当前轮次
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BLUE}第 ${iteration} 轮${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-
-    echo ""
-    sleep 3  # 间隔3秒
-
-    # 1. 执行 Instagram
+    
+   # 2. 执行 Instagram
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Instagram 批量抓包${NC}"
     "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config instagram_full
     instagram_exit_code=$?
@@ -79,8 +74,25 @@ while true; do
     echo ""
     sleep 3  # 间隔3秒
 
+  # 1. 执行 Facebook
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Facebook 批量抓包${NC}"
+    "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config facebook_full
+    facebook_exit_code=$?
 
-     # 5. 执行 TikTok
+    if [ $facebook_exit_code -ne 0 ]; then
+        echo -e "${YELLOW}⚠️  Facebook 批量抓包异常退出 (exit code: $facebook_exit_code)${NC}"
+    else
+        echo -e "${GREEN}✅ Facebook 批量抓包完成${NC}"
+    fi
+
+ 
+
+  
+
+    echo ""
+    sleep 3  # 间隔3秒
+
+     # 3. 执行 TikTok
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: TikTok 批量抓包${NC}"
     "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config tiktok_full
     tiktok_exit_code=$?
@@ -93,7 +105,8 @@ while true; do
 
     echo ""
     sleep 3  # 间隔3秒
-    # # 3. 执行 知乎
+
+    # 4. 执行 知乎
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: 知乎 批量抓包${NC}"
     "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config zhihu_full
     zhihu_exit_code=$?
@@ -109,7 +122,7 @@ while true; do
 
    
 
-    # 6. 执行 Weibo
+    # 5. 执行 Weibo
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行: Weibo 批量抓包${NC}"
     "$PYTHON_BIN" "$PROJECT_DIR/batch_capture.py" --config weibo_full
     weibo_exit_code=$?
@@ -121,7 +134,7 @@ while true; do
     fi
 
     echo ""
-    echo -e "${BLUE}第 ${iteration} 轮完成 (Instagram → TikTok → 知乎 → 微博)${NC}"
+    echo -e "${BLUE}第 ${iteration} 轮完成 (Instagram → Facebook → TikTok → 知乎 → 微博)${NC}"
     echo ""
 
     # 增加计数器

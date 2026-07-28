@@ -87,26 +87,60 @@ class RemoteCapture:
         self._logger.info("="*70)
 
         try:
-            # 执行命令并获取PID
-            exit_code, stdout, stderr = self._ssh.exec_command(cmd, timeout=10)
+            # 执行命令并获取PID（增加超时时间）
+            exit_code, stdout, stderr = self._ssh.exec_command(cmd, timeout=30)
 
             if exit_code != 0:
                 raise TcpdumpError(f"Failed to start remote tcpdump: {stderr}")
 
             # 解析PID
             try:
-                self._pid = int(stdout.strip())
+                pid_str = stdout.strip()
+                if not pid_str:
+                    raise TcpdumpError("Empty PID from remote tcpdump")
+                self._pid = int(pid_str)
+                self._logger.info(f"Got PID: {self._pid}")
             except ValueError:
-                raise TcpdumpError(f"Invalid PID from remote tcpdump: {stdout}")
+                raise TcpdumpError(f"Invalid PID from remote tcpdump: {repr(stdout)}")
 
-            # 等待一小段时间，验证进程是否成功启动
-            time.sleep(0.5)
+            # 等待tcpdump初始化（增加等待时间，最多重试3次）
+            max_checks = 3
+            check_interval = 1.0
+            process_found = False
+            
+            for check_attempt in range(max_checks):
+                time.sleep(check_interval)
+                
+                # 使用kill -0检查进程是否存在
+                check_code, _, _ = self._ssh.exec_command(f"kill -0 {self._pid} 2>/dev/null")
+                if check_code == 0:
+                    process_found = True
+                    self._logger.info(f"Remote tcpdump process verified (PID: {self._pid}, attempt {check_attempt + 1})")
+                    break
+                
+                self._logger.warning(f"Process check {check_attempt + 1}/{max_checks}: tcpdump PID {self._pid} not found, waiting...")
 
-            # 使用kill -0检查进程是否存在
-            check_code, _, _ = self._ssh.exec_command(f"kill -0 {self._pid} 2>/dev/null")
-            if check_code != 0:
+            if not process_found:
+                # 进程不存在，尝试获取退出状态和错误信息
+                self._logger.error(f"Remote tcpdump process (PID: {self._pid}) exited prematurely")
+                
+                # 检查是否有core dump或错误日志
+                exit_code, stdout, stderr = self._ssh.exec_command(
+                    f"ps aux | grep tcpdump | grep -v grep; echo '---'; cat nohup.out 2>/dev/null; echo '---'; ls -la {remote_path} 2>/dev/null"
+                )
+                
+                self._logger.error(f"Debug info:\n{stdout}\n{stderr}")
+                
+                # 检查pcap文件是否被创建
+                exit_code, stdout, _ = self._ssh.exec_command(f"ls -la {remote_path} 2>/dev/null")
+                if exit_code == 0:
+                    self._logger.warning(f"Pcap file exists despite process exit: {stdout.strip()}")
+                    self._remote_path = remote_path
+                    return
+                
                 raise TcpdumpError(
-                    f"Remote tcpdump process (PID: {self._pid}) not found after start"
+                    f"Remote tcpdump process (PID: {self._pid}) not found after start. "
+                    f"The process may have failed to initialize. Check VPS logs for details."
                 )
 
             self._remote_path = remote_path

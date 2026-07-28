@@ -53,7 +53,7 @@ class CaptureConfig:
     ssh_user: str = "root"
     ssh_password: str = "rXQUHMhMh4AnlgO5"
     ssh_key_path: Optional[str] = None
-    ssh_timeout: int = 10  # 连接超时（秒）
+    ssh_timeout: int = 20  # 连接超时（秒）
     ssh_keepalive_interval: int = 30  # 心跳间隔（秒）
 
     # === 路径配置 ===

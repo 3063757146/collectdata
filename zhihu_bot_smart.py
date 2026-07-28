@@ -633,22 +633,25 @@ def comment_content(driver, content_element, content_list):
 
                 function pickAndClick(scope) {
                     if (!scope) return null;
-                    const buttons = Array.from(scope.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const buttons = Array.from(scope.querySelectorAll('button'));
                     const candidates = buttons.filter(btn => {
                         if (!isVisible(btn)) return false;
                         const text = (btn.innerText || '').trim();
                         const aria = (btn.getAttribute('aria-label') || '').trim();
                         const cls = btn.className || '';
-                        return /条评论|评论/i.test(text) || /评论|comment/i.test(aria) ||
-                               (cls.includes('ContentItem-action') && /评论/i.test(text));
+                        const hasButtonClass = cls.includes('Button');
+                        const hasActionClass = cls.includes('ContentItem-action') || cls.includes('action');
+                        const hasCommentText = /条评论|评论/i.test(text);
+                        const hasCommentAria = /评论|comment/i.test(aria);
+                        return hasCommentText || hasCommentAria ||
+                               (hasActionClass && hasCommentText) ||
+                               (hasButtonClass && (hasCommentText || hasCommentAria));
                     });
                     if (!candidates.length) return null;
 
-                    // 优先“xx 条评论”这种最明确的按钮
                     let target = candidates.find(btn => /\\d+\\s*条评论/.test((btn.innerText || '').trim()));
-                    if (!target) {
-                        target = candidates.find(btn => /条评论|评论/i.test((btn.innerText || '').trim()));
-                    }
+                    if (!target) target = candidates.find(btn => /条评论|评论/i.test((btn.innerText || '').trim()));
+                    if (!target) target = candidates.find(btn => /评论|comment/i.test((btn.getAttribute('aria-label') || '')));
                     if (!target) target = candidates[0];
 
                     target.scrollIntoView({ block: 'center' });
@@ -681,8 +684,13 @@ def comment_content(driver, content_element, content_list):
                         const text = (btn.innerText || '').trim();
                         const aria = (btn.getAttribute('aria-label') || '').trim();
                         const cls = btn.className || '';
-                        return /条评论|评论/i.test(text) || /评论|comment/i.test(aria) ||
-                               (cls.includes('ContentItem-action') && /评论/i.test(text));
+                        const hasButtonClass = cls.includes('Button');
+                        const hasActionClass = cls.includes('ContentItem-action') || cls.includes('action');
+                        const hasCommentText = /条评论|评论/i.test(text);
+                        const hasCommentAria = /评论|comment/i.test(aria);
+                        return hasCommentText || hasCommentAria ||
+                               (hasActionClass && hasCommentText) ||
+                               (hasButtonClass && (hasCommentText || hasCommentAria));
                     });
 
                     if (!candidates.length) return null;
@@ -970,15 +978,21 @@ def share_content(driver, content_element, share_templates):
 
                 function pickButton(scope) {
                     if (!scope) return null;
-                    const buttons = Array.from(scope.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const buttons = Array.from(scope.querySelectorAll('button'));
                     const candidates = buttons.filter(btn => {
                         if (!isVisible(btn)) return false;
                         const text = (btn.innerText || '').trim();
                         const aria = (btn.getAttribute('aria-label') || '').trim();
-                        return /分享/.test(text) || /分享|share/i.test(aria);
+                        const cls = btn.className || '';
+                        const hasButtonClass = cls.includes('Button');
+                        const hasShareText = /分享/.test(text);
+                        const hasShareAria = /分享|share/i.test(aria);
+                        return hasShareText || hasShareAria ||
+                               (hasButtonClass && (hasShareText || hasShareAria));
                     });
                     if (!candidates.length) return null;
-                    return candidates.find(btn => /^分享$/.test((btn.innerText || '').trim()) || /分享/.test((btn.innerText || '').trim())) || candidates[0];
+                    return candidates.find(btn => /^分享$/.test((btn.innerText || '').trim()) || /分享/.test((btn.innerText || '').trim())) || 
+                           candidates.find(btn => /分享|share/i.test((btn.getAttribute('aria-label') || ''))) || candidates[0];
                 }
 
                 const btn = pickButton(root);
@@ -1003,15 +1017,21 @@ def share_content(driver, content_element, share_templates):
                                rect.bottom >= 0 && rect.top <= window.innerHeight;
                     }
 
-                    const buttons = Array.from(document.querySelectorAll('button.ContentItem-action, button.Button--plain, button'));
+                    const buttons = Array.from(document.querySelectorAll('button'));
                     const candidates = buttons.filter(btn => {
                         if (!isVisible(btn)) return false;
                         const text = (btn.innerText || '').trim();
                         const aria = (btn.getAttribute('aria-label') || '').trim();
-                        return /分享/.test(text) || /分享|share/i.test(aria);
+                        const cls = btn.className || '';
+                        const hasButtonClass = cls.includes('Button');
+                        const hasShareText = /分享/.test(text);
+                        const hasShareAria = /分享|share/i.test(aria);
+                        return hasShareText || hasShareAria ||
+                               (hasButtonClass && (hasShareText || hasShareAria));
                     });
                     if (!candidates.length) return null;
-                    const btn = candidates.find(b => /^分享$/.test((b.innerText || '').trim()) || /分享/.test((b.innerText || '').trim())) || candidates[0];
+                    const btn = candidates.find(b => /^分享$/.test((b.innerText || '').trim()) || /分享/.test((b.innerText || '').trim())) || 
+                               candidates.find(b => /分享|share/i.test((b.getAttribute('aria-label') || ''))) || candidates[0];
                     btn.scrollIntoView({ block: 'center' });
                     btn.click();
                     return (btn.innerText || btn.getAttribute('aria-label') || '分享按钮').trim();
@@ -1276,7 +1296,12 @@ def post_pin(driver, post_templates):
 
         entry_selectors = [
             '//div[contains(text(), "分享此刻的想法")]',
-            '//div[contains(@class, "css-1lkz3hi")]',
+            '//div[contains(@class, "css-") and contains(text(), "分享")]',
+            '//button[contains(text(), "发布")]',
+            '//button[contains(text(), "写想法")]',
+            '//button[contains(@class, "Button") and contains(text(), "发布")]',
+            '//button[contains(@class, "Button") and contains(text(), "想法")]',
+            '//div[contains(@class, "css-")]',
         ]
 
         entry_button = None
@@ -1285,9 +1310,11 @@ def post_pin(driver, post_templates):
                 elements = driver.find_elements(By.XPATH, selector)
                 for elem in elements:
                     if elem.is_displayed():
-                        entry_button = elem
-                        print(f"   ✅ 找到发布想法入口")
-                        break
+                        text = elem.text.strip()
+                        if '分享' in text or '发布' in text or '想法' in text:
+                            entry_button = elem
+                            print(f"   ✅ 找到发布想法入口: {text[:20]}")
+                            break
                 if entry_button:
                     break
             except:
@@ -1613,8 +1640,8 @@ def smart_browse_and_interact(
             simulate_reading(2, 5)
 
             # 查找当前可见的内容（回答/文章/想法）
-            # 知乎的内容通常在 .List-item 或 .ContentItem 中
-            content_items = driver.find_elements(By.CSS_SELECTOR, '.List-item, .ContentItem, .Card')
+            # 知乎的内容通常在 .List-item 或 .ContentItem 中，支持新的动态类名
+            content_items = driver.find_elements(By.CSS_SELECTOR, '.List-item, .ContentItem, .Card, [class*="List-item"], [class*="ContentItem"], [class*="Card"]')
 
             if not content_items or len(content_items) < 2:
                 print("   ⚠️  未找到足够的内容，继续滚动...")

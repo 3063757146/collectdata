@@ -498,3 +498,61 @@
 [2026-06-06 12:03:33] INFO: 浏览器已关闭，程序结束
 [2026-06-06 12:03:33] INFO: ============================================================
 
+[2026-07-17 10:24:08] INFO: ============================================================
+[2026-07-17 10:24:08] INFO: 新的运行会话开始
+[2026-07-17 10:24:08] INFO: ============================================================
+[2026-07-17 10:24:08] INFO: 脚本启动
+[2026-07-17 10:24:09] INFO: 浏览器启动成功
+[2026-07-17 10:24:21] ERROR: 程序异常: Message: unknown error: net::ERR_CONNECTION_CLOSED
+  (Session info: chrome=150.0.7871.100)
+Stacktrace:
+#0 0xb6dca5895e20 <unknown>
+#1 0xb6dca5305c08 <unknown>
+#2 0xb6dca52fdbcc <unknown>
+#3 0xb6dca52f0010 <unknown>
+#4 0xb6dca52f1b0c <unknown>
+#5 0xb6dca52f0470 <unknown>
+#6 0xb6dca52efc44 <unknown>
+#7 0xb6dca52ef930 <unknown>
+#8 0xb6dca52ed498 <unknown>
+#9 0xb6dca52edf5c <unknown>
+#10 0xb6dca53092bc <unknown>
+#11 0xb6dca538f5a8 <unknown>
+#12 0xb6dca538eb00 <unknown>
+#13 0xb6dca5345030 <unknown>
+#14 0xb6dca585c06c <unknown>
+#15 0xb6dca585ae78 <unknown>
+#16 0xb6dca5849930 <unknown>
+#17 0xb6dca585b54c <unknown>
+#18 0xb6dca583437c <unknown>
+#19 0xb6dca5881fec <unknown>
+#20 0xb6dca58821ac <unknown>
+#21 0xb6dca58948ac <unknown>
+#22 0xf093910d5958 <unknown>
+#23 0xf0939113bb48 <unknown>
+
+[2026-07-17 10:24:25] INFO: 浏览器已关闭，程序结束
+[2026-07-17 10:24:25] INFO: ============================================================
+
+[2026-07-17 11:15:46] INFO: ============================================================
+[2026-07-17 11:15:46] INFO: 新的运行会话开始
+[2026-07-17 11:15:46] INFO: ============================================================
+[2026-07-17 11:15:46] INFO: 脚本启动
+[2026-07-17 11:15:47] INFO: 浏览器启动成功
+[2026-07-17 11:16:21] WARNING: 用户中断程序（Ctrl+C）
+[2026-07-17 11:16:22] WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=48197): Failed to establish a new connection: [Errno 111] Connection refused")': /session/d7bbed96ddc33baf4541de5d36b4fefc
+[2026-07-17 11:16:22] WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=48197): Failed to establish a new connection: [Errno 111] Connection refused")': /session/d7bbed96ddc33baf4541de5d36b4fefc
+[2026-07-17 11:16:22] WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError("HTTPConnection(host='localhost', port=48197): Failed to establish a new connection: [Errno 111] Connection refused")': /session/d7bbed96ddc33baf4541de5d36b4fefc
+[2026-07-17 11:16:22] INFO: 浏览器已关闭，程序结束
+[2026-07-17 11:16:22] INFO: ============================================================
+
+[2026-07-17 13:54:27] INFO: ============================================================
+[2026-07-17 13:54:27] INFO: 新的运行会话开始
+[2026-07-17 13:54:27] INFO: ============================================================
+[2026-07-17 13:54:27] INFO: 脚本启动
+[2026-07-17 13:54:28] INFO: 浏览器启动成功
+[2026-07-17 13:54:36] WARNING: 检测到未登录状态，等待用户登录
+[2026-07-17 13:55:20] INFO: 用户登录完成
+[2026-07-17 13:55:21] INFO: 浏览器已关闭，程序结束
+[2026-07-17 13:55:21] INFO: ============================================================
+

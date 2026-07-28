@@ -1328,6 +1328,7 @@ def smart_browse_and_interact(
 
     max_attempts = max_posts * 3  # 最多尝试次数（避免无限循环）
     i = 0
+    no_post_count = 0  # 连续未找到帖子的计数器
 
     while i < max_attempts:
         i += 1
@@ -1367,10 +1368,21 @@ def smart_browse_and_interact(
             posts = driver.find_elements(By.CSS_SELECTOR, 'div[role="article"]')
 
             if not posts or len(posts) < 2:
-                print("   ⚠️  未找到足够的帖子，继续滚动...")
-                driver.execute_script("window.scrollBy(0, 1200);")  # 强制向下滚动
-                time.sleep(2)
+                no_post_count += 1
+                print(f"   ⚠️  未找到足够的帖子（连续 {no_post_count} 次）")
+
+                if no_post_count >= 3:
+                    print("   🔄 连续3次未找到帖子，刷新页面...")
+                    driver.refresh()
+                    time.sleep(3)
+                    no_post_count = 0
+                else:
+                    print("   📜 继续滚动加载...")
+                    driver.execute_script("window.scrollBy(0, 1200);")
+                    time.sleep(2)
                 continue
+
+            no_post_count = 0  # 找到帖子，重置计数器
 
             print(f"   ✅ 找到 {len(posts)} 个帖子")
 

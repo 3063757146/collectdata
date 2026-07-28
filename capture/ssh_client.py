@@ -174,7 +174,7 @@ class SSHController:
         Raises:
             SSHCommandError: 命令执行失败
         """
-        _CONNECTION_ERRORS = ('timeout', 'eof', 'channel', 'transport', 'socket', 'reset')
+        _CONNECTION_ERRORS = ('timeout', 'eof', 'channel', 'transport', 'socket', 'reset', 'bad', 'descriptor')
 
         for attempt in range(2):  # 最多尝试2次：原始连接 + 重连后重试
             self.ensure_connected()

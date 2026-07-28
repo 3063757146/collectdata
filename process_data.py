@@ -15,7 +15,8 @@
     - pcap 的父目录名 = platform
     - xxx_vps.pcap  → perspective=vps,  flow=vps_website
     - xxx_mac.pcap  → perspective=mac,  flow=mac_vps
-    - 输出到 data/{platform}/{basename}.{ext}
+    - 输出到 data/{source_dir}/{platform}/{side}/{basename}.{ext}
+    - 不同 output 文件夹的数据会分开存储，不会互相覆盖
 """
 
 import os
@@ -99,17 +100,28 @@ def get_flow_config(side: str) -> Tuple[str, str]:
         return 'vps_website', 'vps'
 
 
-def get_output_path(pcap_path: str, platform: str, side: str, fmt: str) -> str:
-    """构建输出文件路径：data/{platform}/{side}/{basename}.{ext}"""
+def get_source_dir(pcap_path: str, input_root: str) -> str:
+    """
+    获取源目录名称（input_root 的文件夹名）
+    如 input_root=output1 → 'output1'
+    如 input_root=output2/vps → 'vps'（取最后一级）
+    """
+    return os.path.basename(os.path.normpath(input_root))
+
+
+def get_output_path(pcap_path: str, input_root: str, platform: str, side: str, fmt: str) -> str:
+    """构建输出文件路径：data/{source_dir}/{platform}/{side}/{basename}.{ext}"""
     basename = os.path.basename(pcap_path)
     name_without_ext = basename.rsplit('.', 1)[0]
     ext = FORMAT_EXTENSIONS[fmt]
-    output_dir = os.path.join(DATA_DIR, platform, side)
+    source_dir = get_source_dir(pcap_path, input_root)
+    output_dir = os.path.join(DATA_DIR, source_dir, platform, side)
     return os.path.join(output_dir, name_without_ext + ext)
 
 
 def process_one(
     pcap_path: str,
+    input_root: str,
     fmt: str,
     skip_existing: bool,
     dry_run: bool,
@@ -124,7 +136,7 @@ def process_one(
     platform = get_platform(pcap_path)
     side = get_side(pcap_path)
     flow_type, perspective = get_flow_config(side)
-    output_path = get_output_path(pcap_path, platform, side, fmt)
+    output_path = get_output_path(pcap_path, input_root, platform, side, fmt)
 
     if platform not in KNOWN_PLATFORMS:
         print(f"  ⚠️  未知平台目录: {platform}，继续处理")
@@ -174,7 +186,7 @@ def process_one(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='批量 pcap 预处理：提取流量特征并保存到 data/{platform}/',
+        description='批量 pcap 预处理：提取流量特征并保存到 data/{source_dir}/{platform}/{side}/',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
@@ -193,7 +205,7 @@ def main():
   # 预览（不实际处理）
   %(prog)s output/vps --dry-run
 
-输出目录: data/{platform}/
+输出目录: data/{source_dir}/{platform}/{side}/
         """
     )
 
@@ -270,14 +282,17 @@ def main():
 
     for i, pcap_path in enumerate(pcap_files, 1):
         platform = get_platform(pcap_path)
+        source_dir = get_source_dir(pcap_path, input_path)
 
-        # 打印平台分隔
-        if platform != current_platform:
-            current_platform = platform
-            print(f"\n── {platform} ──")
+        # 打印平台/来源分隔
+        print_label = f"{source_dir}/{platform}" if source_dir != platform else platform
+        if print_label != current_platform:
+            current_platform = print_label
+            print(f"\n── {print_label} ──")
 
         result = process_one(
             pcap_path=pcap_path,
+            input_root=input_path,
             fmt=args.fmt,
             skip_existing=args.skip_existing,
             dry_run=args.dry_run,
@@ -288,7 +303,7 @@ def main():
         if result == 'skipped':
             print(f"  [{i:4d}/{len(pcap_files)}] ⏭  {os.path.basename(pcap_path)}")
         elif result == 'ok' and not args.dry_run:
-            output_path = get_output_path(pcap_path, platform, get_side(pcap_path), args.fmt)
+            output_path = get_output_path(pcap_path, input_path, platform, get_side(pcap_path), args.fmt)
             print(f"  [{i:4d}/{len(pcap_files)}] ✅ {os.path.basename(pcap_path)}")
             print(f"           → {os.path.relpath(output_path, BASE_DIR)}")
 

@@ -287,7 +287,7 @@ def like_video(driver):
     """点赞视频"""
     import re
 
-    def _is_liked(icon_elem):
+    def _is_liked_by_color(icon_elem):
         try:
             style = icon_elem.get_attribute('style') or ''
             m = re.search(r'color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)', style)
@@ -298,38 +298,156 @@ def like_video(driver):
             pass
         return False
 
+    def _find_like_button_js():
+        """使用JavaScript查找点赞按钮，支持新的tux-button结构"""
+        return driver.execute_script("""
+            function isVisible(el) {
+                if (!el) return false;
+                const style = window.getComputedStyle(el);
+                const rect = el.getBoundingClientRect();
+                return style.display !== 'none' && style.visibility !== 'hidden' &&
+                       rect.width > 0 && rect.height > 0 &&
+                       rect.bottom >= 0 && rect.top <= window.innerHeight;
+            }
+
+            function hasHeartSVG(el) {
+                if (!el) return false;
+                const svg = el.querySelector('svg');
+                if (!svg) return false;
+                const path = svg.querySelector('path');
+                if (!path) return false;
+                const d = path.getAttribute('d') || '';
+                if (d.startsWith('M24 9.44')) return true;
+                if (d.includes('M24') && d.includes('9.44') && !d.includes('M2 21.5')) return true;
+                if (d.includes('4.67') && !d.includes('M2 21.5')) return true;
+                return false;
+            }
+
+            const selectors = [
+                'button[data-testid="tux-web-icon-button"]',
+                'span[data-e2e="like-icon"]',
+                'span[class*="Heart"]',
+                'button[class*="tux-button"]',
+                'button[class*="like"]',
+                'div[class*="like"]',
+                'span[class*="like"]'
+            ];
+
+            for (const selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const el of elements) {
+                    if (!isVisible(el)) continue;
+                    
+                    if (selector.includes('Heart') && hasHeartSVG(el)) {
+                        return { found: true, element: el, type: 'heart_span' };
+                    }
+                    
+                    if (selector.includes('tux-button')) {
+                        const heartWrapper = el.querySelector('[class*="Heart"]');
+                        if (heartWrapper || hasHeartSVG(el)) {
+                            return { found: true, element: el, type: 'tux_button' };
+                        }
+                    }
+                    
+                    if (selector.includes('data-e2e') && selector.includes('like-icon')) {
+                        return { found: true, element: el, type: 'e2e_span' };
+                    }
+                    
+                    if (selector.includes('class*="like"')) {
+                        const heart = el.querySelector('svg, [class*="Heart"]');
+                        if (heart) {
+                            return { found: true, element: el, type: 'like_class' };
+                        }
+                    }
+                }
+            }
+
+            const allButtons = document.querySelectorAll('button');
+            for (const btn of allButtons) {
+                if (!isVisible(btn)) continue;
+                const heart = btn.querySelector('[class*="Heart"]');
+                if (heart || hasHeartSVG(btn)) {
+                    return { found: true, element: btn, type: 'button_with_heart' };
+                }
+            }
+
+            return { found: false };
+        """)
+
+    def _check_liked_status_js(element):
+        """检查点赞状态"""
+        return driver.execute_script("""
+            const el = arguments[0];
+            if (!el) return { liked: false, color: '' };
+            
+            const svg = el.querySelector('svg');
+            if (svg) {
+                const colorAttr = svg.getAttribute('color') || '';
+                if (colorAttr.includes('255') || colorAttr.includes('220') || colorAttr.includes('red')) {
+                    return { liked: true, color: colorAttr };
+                }
+                if (colorAttr.includes('rgba(22, 24, 35, 1)')) {
+                    return { liked: false, color: colorAttr };
+                }
+            }
+            
+            const style = window.getComputedStyle(el);
+            const color = style.color || '';
+            if (color.includes('255') && color.includes('0,')) {
+                return { liked: true, color: color };
+            }
+            
+            const heartWrapper = el.querySelector('[class*="Heart"]');
+            if (heartWrapper) {
+                const heartStyle = window.getComputedStyle(heartWrapper);
+                const heartColor = heartStyle.color || '';
+                if (heartColor.includes('255') && heartColor.includes('0,')) {
+                    return { liked: true, color: heartColor };
+                }
+            }
+            
+            return { liked: false, color: '' };
+        """, element)
+
     try:
         print("      🔍 查找点赞按钮...")
 
-        # 只取第一个可见的点赞图标，避免找到多个导致重复点击
-        elements = driver.find_elements(By.CSS_SELECTOR, 'span[data-e2e="like-icon"]')
-        visible = [e for e in elements if e.is_displayed()]
-        if not visible:
+        result = _find_like_button_js()
+        
+        if not result.get('found'):
             print("      ❌ 未找到点赞按钮")
             logging.warning("点赞失败：未找到点赞按钮")
             return False
 
-        like_icon = visible[0]
+        like_element = result['element']
+        element_type = result['type']
+        print(f"      ✅ 找到点赞按钮 (类型: {element_type})")
 
-        # 已点赞则跳过（防止重复执行时取消点赞）
-        if _is_liked(like_icon):
-            print("      ⚠️  已经点赞，跳过")
+        status = _check_liked_status_js(like_element)
+        if status.get('liked'):
+            print(f"      ⚠️  已经点赞，跳过 (颜色: {status.get('color', '')})")
             logging.info("点赞跳过：已点赞")
             return True
 
-        # 点击父按钮（span 本身不可点击）
-        click_target = like_icon.find_element(By.XPATH, '..')
+        click_target = like_element
+        if element_type == 'heart_span' or element_type == 'e2e_span':
+            try:
+                click_target = like_element.find_element(By.XPATH, '..')
+                print("      💡 点击父元素")
+            except:
+                pass
+
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", click_target)
         time.sleep(random.uniform(0.3, 0.8))
 
-        # 只点击一次，不使用 fallback（多次点击会导致取消点赞）
         driver.execute_script("arguments[0].click();", click_target)
         print("      ✅ 点赞按钮已点击")
 
         time.sleep(1.5)
 
-        if _is_liked(like_icon):
-            print("      ✅ 点赞成功（颜色确认）")
+        status = _check_liked_status_js(like_element)
+        if status.get('liked'):
+            print(f"      ✅ 点赞成功（颜色确认: {status.get('color', '')}）")
             logging.info("点赞成功（颜色确认）")
         else:
             print("      ✅ 点赞已操作（假定成功）")
@@ -349,55 +467,98 @@ def comment_video(driver, content_list):
     try:
         print("      🔍 查找评论按钮...")
 
-        # 评论按钮选择器
-        # 关键发现：评论按钮是 span[data-e2e="comment-icon"]，需要点击其父元素
-        comment_button_selectors = [
-            # 方法1: 通过 data-e2e="comment-icon" 找到图标，点击父元素（最可靠）
-            ('XPATH', '//span[@data-e2e="comment-icon"]/parent::*'),
+        def _find_comment_button_js():
+            """使用JavaScript查找评论按钮，支持新的tux-button结构"""
+            return driver.execute_script("""
+                function isVisible(el) {
+                    if (!el) return false;
+                    const style = window.getComputedStyle(el);
+                    const rect = el.getBoundingClientRect();
+                    return style.display !== 'none' && style.visibility !== 'hidden' &&
+                           rect.width > 0 && rect.height > 0 &&
+                           rect.bottom >= 0 && rect.top <= window.innerHeight;
+                }
 
-            # 方法2: 直接查找 data-e2e="comment-icon"
-            ('CSS', 'span[data-e2e="comment-icon"]'),
+                function hasCommentSVG(el) {
+                    if (!el) return false;
+                    const svg = el.querySelector('svg');
+                    if (!svg) return false;
+                    const path = svg.querySelector('path');
+                    if (!path) return false;
+                    const d = path.getAttribute('d') || '';
+                    if (d.startsWith('M2 21.5')) return true;
+                    if (d.includes('M2 21.5') && !d.includes('M24 9.44')) return true;
+                    if (d.includes('14 25') && d.includes('3 0') && !d.includes('M24')) return true;
+                    return false;
+                }
 
-            # 方法3: 通过其他 data-e2e 属性
-            ('CSS', 'button[data-e2e="comment-button"]'),
-            ('CSS', 'button[data-e2e="browse-comment"]'),
+                const selectors = [
+                    'button[data-testid="tux-web-icon-button"]',
+                    'span[data-e2e="comment-icon"]',
+                    'button[data-e2e="comment-button"]',
+                    'button[data-e2e="browse-comment"]',
+                    'button[class*="tux-button"]',
+                    'button[class*="comment"]',
+                    'div[class*="comment"]',
+                    'span[class*="comment"]'
+                ];
 
-            # 方法4: 通过 aria-label
-            ('CSS', 'button[aria-label*="comment"]'),
-            ('CSS', 'button[aria-label*="Comment"]'),
-            ('CSS', 'button[aria-label*="评论"]'),
-        ]
+                for (const selector of selectors) {
+                    const elements = document.querySelectorAll(selector);
+                    for (const el of elements) {
+                        if (!isVisible(el)) continue;
 
-        comment_button = None
-        for method, selector in comment_button_selectors:
-            try:
-                if method == 'CSS':
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                else:
-                    elements = driver.find_elements(By.XPATH, selector)
+                        if (selector.includes('comment-icon') || selector.includes('comment-button') || selector.includes('browse-comment')) {
+                            return { found: true, element: el, type: 'e2e_element' };
+                        }
 
-                if elements:
-                    comment_button = elements[0]
-                    print(f"      ✅ 找到评论按钮: {selector[:50]}")
-                    break
-            except:
-                continue
+                        if (selector.includes('tux-button') || selector.includes('tux-web-icon-button')) {
+                            const hasComment = el.querySelector('[class*="Comment"], [class*="Message"]');
+                            if (hasComment || hasCommentSVG(el)) {
+                                return { found: true, element: el, type: 'tux_button' };
+                            }
+                        }
 
-        if not comment_button:
+                        if (selector.includes('class*="comment"')) {
+                            const svg = el.querySelector('svg');
+                            if (svg && hasCommentSVG(el)) {
+                                return { found: true, element: el, type: 'comment_class' };
+                            }
+                        }
+                    }
+                }
+
+                const allButtons = document.querySelectorAll('button');
+                for (const btn of allButtons) {
+                    if (!isVisible(btn)) continue;
+                    const commentIcon = btn.querySelector('[class*="Comment"], [class*="Message"], svg[viewBox="0 0 48 48"]');
+                    if (commentIcon && hasCommentSVG(btn)) {
+                        return { found: true, element: btn, type: 'button_with_comment' };
+                    }
+                }
+
+                return { found: false };
+            """)
+
+        result = _find_comment_button_js()
+
+        if not result.get('found'):
             print("      ❌ 未找到评论按钮")
             logging.warning("评论失败：未找到评论按钮")
             return False
 
-        # 确定要点击的元素（如果是 span，点击父元素）
+        comment_button = result['element']
+        element_type = result['type']
+        print(f"      ✅ 找到评论按钮 (类型: {element_type})")
+
         click_target = comment_button
-        if comment_button.tag_name == 'span':
+        if element_type == 'e2e_element' and comment_button.tag_name == 'span':
             try:
                 click_target = comment_button.find_element(By.XPATH, '..')
-                print(f"      💡 点击父元素: {click_target.tag_name}")
+                print("      💡 点击父元素")
             except:
                 pass
 
-        # 点击评论按钮
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", click_target)
         time.sleep(0.5)
         driver.execute_script("arguments[0].click();", click_target)
